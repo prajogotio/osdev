@@ -7,12 +7,22 @@ jmp main
 %include "inc/stdio.inc"
 %include "inc/install_gdt.inc"
 %include "bootloader_test/print_hex.asm"
-SIZE_OF_KERNEL_IMAGE dd 512*16
 
 LoadingMsg db "Preparing to load operating system...", 0x0A, 0x0D, 0x00
 DiskLoadedMsg db "Disk Loaded!", 0x0A, 0x0D, 0
 WelcomeMsg db "    Welcome to TIO OS!!!!!", 0x0A, "tixxo os tio os tio os yoo", 0
+
 main:
+
+kernel_size:
+  dd 0
+
+  ; Retrieve kernel_size = 512 * kernel_sector stored in stack
+  pop eax
+  mov ecx, 512
+  mul ecx
+  mov [kernel_size], eax
+
 
   mov si, DiskLoadedMsg
   call Puts16
@@ -98,7 +108,7 @@ ProtectedMode:
   mov [0x00100000 + ecx], ebx
 
   inc ecx
-  cmp ecx, [SIZE_OF_KERNEL_IMAGE]
+  cmp ecx, [kernel_size]
   je .CopyKernelDone
   jmp .CopyKernelWhileLoop
 
