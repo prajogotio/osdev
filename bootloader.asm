@@ -7,7 +7,8 @@ jmp loader
 %include "inc/load_from_disk.inc"
 %include "bootloader_test/print_hex.asm"
 
-KERNEL_SECTORS dd 16
+KERNEL_SECTORS dd 24
+KERNEL_STARTING_SECTOR dd 5
 
 loader:
   mov si, WelcomeMsg
@@ -27,8 +28,8 @@ loader:
   mov ax, 0x90
   mov es, ax
   mov bx, 0
-  mov al, [KERNEL_SECTORS]    ; load al sectors.
-  mov cl, 4                 ; starting from cl -th sector.
+  mov al, [KERNEL_SECTORS]          ; load al sectors.
+  mov cl, [KERNEL_STARTING_SECTOR]  ; starting from cl -th sector.
   mov dl, [BootDrive]
   call LoadFromDisk
 

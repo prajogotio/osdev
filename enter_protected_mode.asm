@@ -24,6 +24,7 @@ kernel_size:
   mov [kernel_size], eax
 
 
+  ; Preparing stage 2
   mov si, DiskLoadedMsg
   call Puts16
   cli
@@ -67,6 +68,15 @@ memory_information:
   mov dword [ebx+12], eax
 
 
+  ; Get memory map
+  push 0
+  pop es
+  mov di, memory_map_table
+
+  call GetMemoryMap
+
+
+
   ; Going to protected mode
   mov si, LoadingMsg
   call Puts16
@@ -104,6 +114,7 @@ ProtectedMode:
   mov ecx, 0
 
 .CopyKernelWhileLoop:
+
   mov ebx, [0x900 + ecx]
   mov [0x00100000 + ecx], ebx
 
@@ -113,16 +124,23 @@ ProtectedMode:
   jmp .CopyKernelWhileLoop
 
 .CopyKernelDone:
+
   ; Jump to Kernel
   ; Set address of memory_info to ebx
   mov ebx, memory_information
-  jmp 0x00100000
+  ; Set address of memory map info to ecx
+  mov ecx, memory_map_table
+
+  jmp 0x8:0x00100000
+
 
 Stop:
   cli
   hlt
 
 %include "inc/Puts32.inc"
+%include "inc/memory_map.inc"
 
+memory_map_table:
 
-times 1024 - ($ - $$) db 0
+times 1536 - ($ - $$) db 0

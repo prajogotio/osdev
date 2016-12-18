@@ -129,4 +129,32 @@ ClearScreen32:
   popa
   ret
 
+; ecx the number
+PrintHex32:
+  pusha
+  mov bl, ' '
+  call Putch32
+  mov bl, 'X'
+  call Putch32
+PrintHex32_While:
+  or ecx, ecx
+
+  je PrintHex32_Done
+
+  xor ebx, ebx
+  mov bl, cl
+  and bl, 0xf
+  mov bl, [HexCharacter + bx]
+  call Putch32
+
+  shr ecx, 4
+  jmp PrintHex32_While
+
+PrintHex32_Done:
+  mov bl, 'I'
+  call Putch32
+  popa
+  ret
+
+HexCharacter db "0123456789abcdef", 0
 %endif ; __TIO_OS_PUTS32_INC__

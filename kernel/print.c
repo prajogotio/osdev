@@ -67,6 +67,7 @@ void ClearScreen() {
     }
   }
   cursorX_ = cursorY_ = 0;
+  UpdateCursorPosition();
 }
 
 
@@ -92,13 +93,15 @@ void PrintString(char* str) {
 }
 
 void PrintHex(unsigned int val) {
-  char hex[9] = {0};
+  char hex[9] = "00000000";
   for (int i = 0; i < 8; ++i) {
-    int k = val & 0xf;
-    if (k <= 9) {
+    unsigned int k = val & 0xf;
+    if (0 <= k && k <= 9) {
       hex[7-i] = '0' + k;
-    } else {
+    } else if (10 <= k && k <= 15) {
       hex[7-i] = 'a' + k-10;
+    } else {
+      hex[7-i] = '?';
     }
     val = val >> 4;
   }
