@@ -6,8 +6,8 @@ jmp main
 
 %include "inc/stdio.inc"
 %include "inc/install_gdt.inc"
-
-SIZE_OF_KERNEL_IMAGE dd 512*10
+%include "bootloader_test/print_hex.asm"
+SIZE_OF_KERNEL_IMAGE dd 512*16
 
 LoadingMsg db "Preparing to load operating system...", 0x0A, 0x0D, 0x00
 DiskLoadedMsg db "Disk Loaded!", 0x0A, 0x0D, 0
@@ -25,6 +25,39 @@ main:
   mov sp, 0xFFFF
   sti
 
+
+  ; Getting memory information
+  xor eax, eax
+  xor ebx, ebx
+  xor ecx, ecx
+  xor edx, edx
+  mov ax, 0xe801
+  int 0x15
+
+memory_information:
+  dd 0
+  dd 0
+  dd 0
+  dd 0
+
+  ; Place memory information into the above structure
+  push edx    ; Configured Mem > 16MB, in 64KB blocks
+  push ecx    ; Configured Mem 1MB - 16MB in KB
+  push ebx    ; Extended Mem > 16MB, in 64KB blocks
+  push eax    ; Extended Mem 1MB - 16MB in KB
+
+  mov ebx, memory_information
+  pop eax
+  mov dword [ebx], eax
+  pop eax
+  mov dword [ebx+4], eax
+  pop eax
+  mov dword [ebx+8], eax
+  pop eax
+  mov dword [ebx+12], eax
+
+
+  ; Going to protected mode
   mov si, LoadingMsg
   call Puts16
 
@@ -71,7 +104,8 @@ ProtectedMode:
 
 .CopyKernelDone:
   ; Jump to Kernel
-  mov ebx, [0x00100000]
+  ; Set address of memory_info to ebx
+  mov ebx, memory_information
   jmp 0x00100000
 
 Stop:

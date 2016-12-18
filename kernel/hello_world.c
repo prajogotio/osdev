@@ -2,9 +2,12 @@
 #include "debug.h"
 #include "hal.h"
 #include "pit.h"
-
+#include "stdint.h"
 
 void main() {
+  uint32_t* memory_information = 0;
+  __asm__("movl %%ebx, %0" : "=r"(memory_information));
+
   ClearScreen();
   char* welcome_message = 
                "SCROLLING TEST: THIS ROW SHOULD NOT BE PRINTED\n"
@@ -42,6 +45,14 @@ void main() {
 
   __asm__("sti");
 
+  PrintString("Extended Memory between 1MB to 16MB (in KB): ");
+  PrintHex((int) *memory_information);
+  PrintString("\nExtended Memory between > 16MB (in 64KB): ");
+  PrintHex((int) *(memory_information+1));
+  PrintString("\nConfigured Memory between 1MB to 16MB (in KB): ");
+  PrintHex((int) *(memory_information+2));
+  PrintString("\nConfigured Memory between > 16MB (in 64KB): ");
+  PrintHex((int) *(memory_information+3));
   for (;;) {
     DebugMoveCursor(0, 0);
     DebugPrintString("Current tick count: ");

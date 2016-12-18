@@ -1,6 +1,7 @@
 printhex_charset db "0123456789abcdef", 0
 printhex_output db "0x0000", 0
 PrintHex:
+  pusha
   ; bx is the indexing register
   ; cx is the number
 
@@ -34,4 +35,5 @@ PrintHexDisplayWhile:
   jmp PrintHexDisplayWhile
 
 PrintHexFinish:
+  popa
   ret

@@ -1,4 +1,6 @@
 #include "keyboard.h"
+#include "hal.h"
+#include "print.h"
 
 #define KEYBOARD_READ_PORT    0x60
 

@@ -5,9 +5,8 @@ jmp loader
 
 %include "inc/stdio.inc"
 %include "inc/load_from_disk.inc"
-%include "bootloader_test/print_hex.asm"
 
-KERNEL_SECTORS db 8
+KERNEL_SECTORS db 16
 
 loader:
   mov si, WelcomeMsg
@@ -31,7 +30,6 @@ loader:
   mov cl, 4                 ; starting from cl -th sector.
   mov dl, [BootDrive]
   call LoadFromDisk
-
 
   ; Jump to stage 2
   jmp 0x500
