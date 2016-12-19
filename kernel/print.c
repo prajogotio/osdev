@@ -114,3 +114,22 @@ void MoveCursor(unsigned int x, unsigned int y) {
   cursorY_ = y;
   UpdateCursorPosition();
 }
+
+void PrintInt(int value) {
+  if (value < 0) {
+    PrintString("-");
+    PrintInt(-value);
+    return;
+  }
+  char* buffer = "????????????????";
+  int position = 15;
+  if (value == 0) {
+    buffer[position--] = '0';
+  } else {
+    while (value) {
+      buffer[position--] = '0' + (value % 10);
+      value /= 10;
+    }
+  }
+  PrintString((char*) &buffer[position+1]);
+}

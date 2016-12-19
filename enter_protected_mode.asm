@@ -120,11 +120,7 @@ ProtectedMode:
 
   ; Jump to Kernel
   ; Set address of memory_info to ebx
-  mov ebx, memory_information
-
-  mov ecx, [memory_map_table]
-  call PrintHex32
-
+  mov ebx, kernel_memory_table
 
   jmp 0x8:0x00100000
 
@@ -136,19 +132,17 @@ Stop:
 %include "inc/Puts32.inc"
 %include "inc/memory_map.inc"
 
-
-kernel_size:
-  dd 0
-
 kernel_copy_base
   dd 0
 
+kernel_memory_table:
+kernel_size:
+  dd 0
 memory_information:
   dd 0
   dd 0
   dd 0
   dd 0
-
 memory_map_table:
 
 

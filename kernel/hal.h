@@ -3,6 +3,10 @@
 
 #include "stdint.h"
 
+#define KERNEL_OFFSET 0x00100000
+
+extern uint32_t* Hal_memory_information;
+
 extern int HalInitialize();
 extern int HalShutdown();
 extern void GenerateInterrupt(int n);

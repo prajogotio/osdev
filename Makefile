@@ -10,9 +10,9 @@ test: enter_protected_mode.asm bootloader.asm first_kernel.asm
 	nasm -f bin first_kernel.asm -o first_kernel.bin
 	cat bootloader.bin enter_protected_mode.bin first_kernel.bin > tio_os.img
 
-hello_world: kernel/hello_world.c kernel/hello_world.ld printing harware_abstraction_layer gdt idt pit pic keyboard debug
-	i686-elf-gcc -ffreestanding -std=c99 -c kernel/hello_world.c -o kernel/hello_world.o
-	i686-elf-ld -T kernel/hello_world.ld --oformat=binary -nostdlib -o kernel/hello_world.bin kernel/hello_world.o kernel/print.o kernel/hal.o kernel/gdt.o kernel/idt.o kernel/pic.o kernel/pit.o kernel/keyboard.o kernel/debug.o
+hello_world: kernel/hello_world.c kernel/hello_world.ld printing harware_abstraction_layer gdt idt pit pic keyboard debug physical string
+	i686-elf-gcc -ffreestanding -std=c99 -c kernel/hello_world.c -o kernel/hello_world.o 
+	i686-elf-ld -T kernel/hello_world.ld --oformat=binary -nostdlib -o kernel/hello_world.bin kernel/hello_world.o kernel/print.o kernel/hal.o kernel/gdt.o kernel/idt.o kernel/pic.o kernel/pit.o kernel/keyboard.o kernel/debug.o kernel/physical.o kernel/string.o
 
 printing: kernel/print.c
 	i686-elf-gcc -ffreestanding -std=c99 -c kernel/print.c -o kernel/print.o
@@ -37,6 +37,13 @@ pic: kernel/pic.c
 
 keyboard: kernel/keyboard.c
 	i686-elf-gcc -ffreestanding -std=c99 -c kernel/keyboard.c -o kernel/keyboard.o
+
+physical: kernel/physical.c
+	i686-elf-gcc -ffreestanding -std=c99 -c kernel/physical.c -o kernel/physical.o
+
+string: kernel/string.c
+	i686-elf-gcc -ffreestanding -std=c99 -c kernel/string.c -o kernel/string.o
+
 
 run:
 	#qemu-img create -f raw tio_os.img 5K

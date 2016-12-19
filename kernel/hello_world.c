@@ -11,10 +11,9 @@ void kernel_main() {
           "movw %ax, %es\n\t"
           "movw %ax, %fs\n\t"
           "movw %ax, %gs\n\t");
-  uint32_t* memory_information = 0;
-  __asm__("movl %%ebx, %0" : "=r"(memory_information));
 
-  uint32_t* memory_map_table = memory_information + 4;
+  Hal_memory_information = 0;
+  __asm__("movl %%ebx, %0" : "=r"(Hal_memory_information));
 
   ClearScreen();
 
@@ -53,34 +52,36 @@ void kernel_main() {
               "Timer and keyboard kinda works!\n");
 
   __asm__("sti");
-  PrintString("Extended Memory between 1MB to 16MB (in KB): ");
-  PrintHex((int) *memory_information);
-  PrintString("\nExtended Memory between > 16MB (in 64KB): ");
-  PrintHex((int) *(memory_information+1));
-  PrintString("\nConfigured Memory between 1MB to 16MB (in KB): ");
-  PrintHex((int) *(memory_information+2));
-  PrintString("\nConfigured Memory between > 16MB (in 64KB): ");
-  PrintHex((int) *(memory_information+3));
-  PrintString("\n");
 
 
-  PrintString("MemoryMap entries: ");
-  int entry_size = *memory_map_table;
-  PrintHex(entry_size);
+  // Test memory allocation.
+  int address_1 = MmapAllocateBlocks(1);
+  PrintString("Page [A] of size 1 is allocated at: ");
+  PrintHex(address_1);
   PrintString("\n");
-  for (int index = 0; index < entry_size; ++index) {
-    PrintString("Entry: \n");
-    int offset = 1+index*6;
-    PrintString("  Base address: ");
-    PrintHex((int) *(memory_map_table+offset));
-    PrintString("  Length: ");
-    PrintHex((int) *(memory_map_table+2+offset));
-    PrintString("  Type: ");
-    PrintHex((int) *(memory_map_table+4+offset));
-    PrintString("  ACPI_NULL: ");
-    PrintHex((int) *(memory_map_table+5+offset));
-    PrintString("\n");
-  }
+
+  int address_1000 = MmapAllocateBlocks(1000);
+  PrintString("Page [B] of size 1000 is allocated at: ");
+  PrintHex(address_1000);
+  PrintString("\n");
+  
+  int address_100 = MmapAllocateBlocks(100);
+  PrintString("Page [C] of size 100 is allocated at: ");
+  PrintHex(address_100);
+  PrintString("\n");
+
+  MmapFreeBlocks(address_1, 1);
+  PrintString("[A] is deallocated\n");
+
+  int address_2 = MmapAllocateBlocks(1);
+  PrintString("Page [D] of size 1 is allocated at: ");
+  PrintHex(address_2);
+  PrintString("\n");
+
+  address_1 = MmapAllocateBlocks(1);
+  PrintString("[A] is reallocated at: ");
+  PrintHex(address_1);
+  PrintString("\n");
 
   for (;;) {
     DebugMoveCursor(0, 0);
