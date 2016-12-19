@@ -5,6 +5,7 @@
 #include "pit.h"
 #include "print.h"
 #include "keyboard.h"
+#include "physical.h"
 
 uint32_t * Hal_memory_information = 0;
 
@@ -58,7 +59,7 @@ void SetInterruptVector(int intno, IRQ_HANDLER handler) {
 }
 
 static void InitializePhysicalMemory() {
-  uint32_t kernel_size = Hal_memory_information;
+  uint32_t kernel_size = *Hal_memory_information;
   uint32_t * memory_info = Hal_memory_information + 1;
   uint32_t * memory_map_table = Hal_memory_information + 5;
   PrintString("Kernel size: ");

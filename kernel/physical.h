@@ -12,6 +12,8 @@ extern void MmapInitialize(uint32_t memory_size, uint32_t* mmap_pointer);
 extern void MmapInitializeRegion(uint32_t base_address, size_t size);
 extern void MmapDeinitializeRegion(uint32_t base_address, size_t size);
 extern void MmapFreeBlocks(void* block_address, int size);
-extern void MmapFreeBlocks(void* block_address, int size);
+extern void* MmapAllocateBlocks(int size);
+
 extern void MmapSanityCheck();
+
 #endif  //__TIO_OS_PHYSICAL_H__

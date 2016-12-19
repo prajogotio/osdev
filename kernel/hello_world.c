@@ -3,7 +3,10 @@
 #include "hal.h"
 #include "pit.h"
 #include "stdint.h"
+#include "physical.h"
 
+
+static void WriteToMemory(void* position, char * str);
 
 void kernel_main() {
   __asm__("movw $0x10, %ax\n\t"
@@ -55,33 +58,37 @@ void kernel_main() {
 
 
   // Test memory allocation.
-  int address_1 = MmapAllocateBlocks(1);
+  int* address_1 = (int *) MmapAllocateBlocks(1);
+  WriteToMemory(address_1, "[A] was here...");
   PrintString("Page [A] of size 1 is allocated at: ");
-  PrintHex(address_1);
+  PrintHex((int) address_1);
   PrintString("\n");
 
-  int address_1000 = MmapAllocateBlocks(1000);
+  int* address_1000 = (int *) MmapAllocateBlocks(1000);
   PrintString("Page [B] of size 1000 is allocated at: ");
-  PrintHex(address_1000);
+  PrintHex((int) address_1000);
   PrintString("\n");
   
-  int address_100 = MmapAllocateBlocks(100);
+  int* address_100 = (int *) MmapAllocateBlocks(100);
   PrintString("Page [C] of size 100 is allocated at: ");
-  PrintHex(address_100);
+  PrintHex((int) address_100);
   PrintString("\n");
 
   MmapFreeBlocks(address_1, 1);
   PrintString("[A] is deallocated\n");
 
-  int address_2 = MmapAllocateBlocks(1);
+  int* address_2 = (int *) MmapAllocateBlocks(1);
   PrintString("Page [D] of size 1 is allocated at: ");
-  PrintHex(address_2);
+  PrintHex((int) address_2);
+  PrintString("\n[D] checks what's on memory: ");
+  PrintString((char *)address_2);
   PrintString("\n");
 
-  address_1 = MmapAllocateBlocks(1);
+  address_1 = (int *) MmapAllocateBlocks(1);
   PrintString("[A] is reallocated at: ");
-  PrintHex(address_1);
+  PrintHex((int) address_1);
   PrintString("\n");
+
 
   for (;;) {
     DebugMoveCursor(0, 0);
@@ -94,4 +101,13 @@ void kernel_main() {
 
   __asm__("cli \n\t"
           "hlt \n\t");
+}
+
+
+static void WriteToMemory(void* position, char * str) {
+  char* index = (char *) position;
+  while (*str) {
+    *(index++) = *(str++);
+  }
+  *index = 0;
 }
