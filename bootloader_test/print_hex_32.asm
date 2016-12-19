@@ -1,10 +1,10 @@
 printhex_charset db "0123456789abcdef", 0
-printhex_output db "0x????", 0
+printhex_output db "0x????????", 0
 PrintHex:
   pushad
   ; bx is the indexing register
-  ; cx is the number
-  mov dx, 4
+  ; ecx is the number
+  mov dx, 8
 
 PrintHexWhile:
   mov bx, 0xf
@@ -18,7 +18,7 @@ PrintHexWhile:
 
   dec dx
   jz PrintHexDisplay
-  shr cx, 4
+  shr ecx, 4
   jmp PrintHexWhile
 
 PrintHexDisplay:

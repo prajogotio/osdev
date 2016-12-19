@@ -6,22 +6,21 @@ jmp main
 
 %include "inc/stdio.inc"
 %include "inc/install_gdt.inc"
-%include "bootloader_test/print_hex.asm"
+%include "bootloader_test/print_hex_32.asm"
 
 LoadingMsg db "Preparing to load operating system...", 0x0A, 0x0D, 0x00
 DiskLoadedMsg db "Disk Loaded!", 0x0A, 0x0D, 0
 WelcomeMsg db "    Welcome to TIO OS!!!!!", 0x0A, "tixxo os tio os tio os yoo", 0
 
 main:
-
-kernel_size:
-  dd 0
-
   ; Retrieve kernel_size = 512 * kernel_sector stored in stack
   pop eax
   mov ecx, 512
   mul ecx
   mov [kernel_size], eax
+
+  pop eax
+  mov [kernel_copy_base], eax
 
 
   ; Preparing stage 2
@@ -45,12 +44,6 @@ kernel_size:
   mov ax, 0xe801
   int 0x15
 
-memory_information:
-  dd 0
-  dd 0
-  dd 0
-  dd 0
-
   ; Place memory information into the above structure
   push edx    ; Configured Mem > 16MB, in 64KB blocks
   push ecx    ; Configured Mem 1MB - 16MB in KB
@@ -67,14 +60,12 @@ memory_information:
   pop eax
   mov dword [ebx+12], eax
 
-
   ; Get memory map
   push 0
   pop es
   mov di, memory_map_table
 
   call GetMemoryMap
-
 
 
   ; Going to protected mode
@@ -110,12 +101,14 @@ ProtectedMode:
   call Puts32
 
   ; Move Kernel to 0x00100000
-  ; from 0x900
+  ; from [kernel_copy_base]
   mov ecx, 0
 
 .CopyKernelWhileLoop:
 
-  mov ebx, [0x900 + ecx]
+  mov ebx, [kernel_copy_base]
+  add ebx, ecx
+  mov ebx, [ebx]
   mov [0x00100000 + ecx], ebx
 
   inc ecx
@@ -128,8 +121,10 @@ ProtectedMode:
   ; Jump to Kernel
   ; Set address of memory_info to ebx
   mov ebx, memory_information
-  ; Set address of memory map info to ecx
-  mov ecx, memory_map_table
+
+  mov ecx, [memory_map_table]
+  call PrintHex32
+
 
   jmp 0x8:0x00100000
 
@@ -141,6 +136,20 @@ Stop:
 %include "inc/Puts32.inc"
 %include "inc/memory_map.inc"
 
+
+kernel_size:
+  dd 0
+
+kernel_copy_base
+  dd 0
+
+memory_information:
+  dd 0
+  dd 0
+  dd 0
+  dd 0
+
 memory_map_table:
 
-times 1536 - ($ - $$) db 0
+
+times 1024 - ($ - $$) db 0

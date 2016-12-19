@@ -7,9 +7,6 @@ bits 16
 ;    acpi_null     4 byte
 ; total: 24 bytes
 
-
-pointer_to_table:
-  dd 0
 GetMemoryMap:
   pushad
 
@@ -26,6 +23,7 @@ GetMemoryMap:
   mov   eax, 0xe820
   mov   ecx, 24
   int   0x15
+
   jc    GetMemoryMap_Error
   cmp   eax, "PAMS"
   jne   GetMemoryMap_Error
@@ -39,17 +37,19 @@ GetMemoryMap_NextEntry:
   int   0x15
 
 GetMemoryMap_Validate:
-  jcxz   GetMemoryMap_SkipEntry       ; ECX stores the size read
-                                      ; if 0, then skip.
+  jcxz   GetMemoryMap_SkipEntry       ; ECX stores the size read. if 0, then skip.
+
   ; Otherwise, check if the entry is a good entry
   ; The entry could potentially contain 0 length, so we can skip it
   mov ecx, dword [es:di + 8]
-  or ecx, dword [es:di + 12]
-  jcxz GetMemoryMap_SkipEntry
+  or  ecx, dword [es:di + 12]
+
+  jz  GetMemoryMap_SkipEntry
 
   ; We got a good entry! Update bp and store to list
   inc bp
   add di, 24
+
 
 GetMemoryMap_SkipEntry:
   cmp ebx, 0
@@ -64,3 +64,8 @@ GetMemoryMap_Done:
   mov word [ebx], bp
   popad
   ret
+
+
+
+pointer_to_table:
+  dd 0

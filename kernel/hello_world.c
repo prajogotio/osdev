@@ -12,9 +12,9 @@ void kernel_main() {
           "movw %ax, %fs\n\t"
           "movw %ax, %gs\n\t");
   uint32_t* memory_information = 0;
-  uint32_t* memory_map_table = 0;
   __asm__("movl %%ebx, %0" : "=r"(memory_information));
-  __asm__("movl %%ecx, %0" : "=r"(memory_map_table));
+
+  uint32_t* memory_map_table = memory_information + 4;
 
   ClearScreen();
 
@@ -68,16 +68,16 @@ void kernel_main() {
   int entry_size = *memory_map_table;
   PrintHex(entry_size);
   PrintString("\n");
-  for (int index = 0; index <= entry_size; ++index) {
-    PrintString("Entry: ");
+  for (int index = 0; index < entry_size; ++index) {
+    PrintString("Entry: \n");
     int offset = 1+index*6;
-    PrintString("\n  Base address: ");
+    PrintString("  Base address: ");
     PrintHex((int) *(memory_map_table+offset));
-    PrintString("\n  Length: ");
+    PrintString("  Length: ");
     PrintHex((int) *(memory_map_table+2+offset));
-    PrintString("\n  Type: ");
+    PrintString("  Type: ");
     PrintHex((int) *(memory_map_table+4+offset));
-    PrintString("\n  ACPI_NULL: ");
+    PrintString("  ACPI_NULL: ");
     PrintHex((int) *(memory_map_table+5+offset));
     PrintString("\n");
   }

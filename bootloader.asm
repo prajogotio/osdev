@@ -7,8 +7,9 @@ jmp loader
 %include "inc/load_from_disk.inc"
 %include "bootloader_test/print_hex.asm"
 
-KERNEL_SECTORS dd 24
-KERNEL_STARTING_SECTOR dd 5
+KERNEL_SECTORS            dd 24
+KERNEL_STARTING_SECTOR    dd 4
+KERNEL_COPY_BASE          dd 0x1000
 
 loader:
   mov si, WelcomeMsg
@@ -24,18 +25,24 @@ loader:
   mov dl, [BootDrive]
   call LoadFromDisk
 
-  ; Load Kernel at 0x900
-  mov ax, 0x90
+  ; Load Kernel at KERNEL_COPY_BASE
+  mov ax, [KERNEL_COPY_BASE]
+  shr ax, 4
   mov es, ax
-  mov bx, 0
+  mov bx, [KERNEL_COPY_BASE]
+  and bx, 0xf
   mov al, [KERNEL_SECTORS]          ; load al sectors.
   mov cl, [KERNEL_STARTING_SECTOR]  ; starting from cl -th sector.
   mov dl, [BootDrive]
   call LoadFromDisk
 
-  ; Send this over to stage 2
+
+  ; Send kernel copy info to over to stage 2
+  mov eax, [KERNEL_COPY_BASE]
+  push eax
   mov eax, [KERNEL_SECTORS]
   push eax
+
 
   ; Jump to stage 2
   jmp 0x500
