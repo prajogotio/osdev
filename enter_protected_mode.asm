@@ -4,6 +4,8 @@ org 0x500
 
 jmp main
 
+%define KERNEL_PROTECTED_BASE 0xc0000000
+
 %include "inc/stdio.inc"
 %include "inc/install_gdt.inc"
 %include "bootloader_test/print_hex_32.asm"
@@ -96,11 +98,22 @@ ProtectedMode:
   out 0x92, al
 
   call ClearScreen32
-
   mov ebx, WelcomeMsg
   call Puts32
 
-  ; Move Kernel to 0x00100000
+  ; Canary: put 0xfaceface at position 0x00100000.
+  mov dword [0x00100000], 0xfaceface
+  mov dword ecx, [0x00100000]
+  call PrintHex32
+
+  call EnablePaging
+
+  ; Test canary: if paging works, 0xc0000000 should contain 0xfaceface
+  mov dword ecx, [0xc0000000]
+  call PrintHex32
+
+
+  ; Move Kernel to KERNEL_PROTECTED_BASE
   ; from [kernel_copy_base]
   mov ecx, 0
 
@@ -109,7 +122,7 @@ ProtectedMode:
   mov ebx, [kernel_copy_base]
   add ebx, ecx
   mov ebx, [ebx]
-  mov [0x00100000 + ecx], ebx
+  mov [KERNEL_PROTECTED_BASE + ecx], ebx
 
   inc ecx
   cmp ecx, [kernel_size]
@@ -122,7 +135,7 @@ ProtectedMode:
   ; Set address of memory_info to ebx
   mov ebx, kernel_memory_table
 
-  jmp 0x8:0x00100000
+  jmp 0x8:KERNEL_PROTECTED_BASE
 
 
 Stop:
@@ -131,6 +144,7 @@ Stop:
 
 %include "inc/Puts32.inc"
 %include "inc/memory_map.inc"
+%include "inc/paging.inc"
 
 kernel_copy_base
   dd 0
@@ -146,4 +160,4 @@ memory_information:
 memory_map_table:
 
 
-times 1024 - ($ - $$) db 0
+times 1536 - ($ - $$) db 0

@@ -3,7 +3,7 @@
 
 #include "stdint.h"
 
-#define KERNEL_OFFSET 0x00100000
+#define KERNEL_OFFSET 0xc0000000
 
 extern uint32_t* Hal_memory_information;
 

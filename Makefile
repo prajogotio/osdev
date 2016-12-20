@@ -4,15 +4,9 @@ all: enter_protected_mode.asm bootloader.asm hello_world
 	cat bootloader.bin enter_protected_mode.bin kernel/hello_world.bin > tio_os.img
 	#dd if=/dev/zero bs=512 count=3 >> tio_os.img
 
-test: enter_protected_mode.asm bootloader.asm first_kernel.asm
-	nasm -f bin bootloader.asm -o bootloader.bin
-	nasm -f bin enter_protected_mode.asm -o enter_protected_mode.bin
-	nasm -f bin first_kernel.asm -o first_kernel.bin
-	cat bootloader.bin enter_protected_mode.bin first_kernel.bin > tio_os.img
-
-hello_world: kernel/hello_world.c kernel/hello_world.ld printing harware_abstraction_layer gdt idt pit pic keyboard debug physical string
+hello_world: kernel/hello_world.c kernel/hello_world.ld printing harware_abstraction_layer gdt idt pit pic keyboard debug physical string pagetable_entry page_directory_entry virtual
 	i686-elf-gcc -ffreestanding -std=c99 -c kernel/hello_world.c -o kernel/hello_world.o 
-	i686-elf-ld -T kernel/hello_world.ld --oformat=binary -nostdlib -o kernel/hello_world.bin kernel/hello_world.o kernel/print.o kernel/hal.o kernel/gdt.o kernel/idt.o kernel/pic.o kernel/pit.o kernel/keyboard.o kernel/debug.o kernel/physical.o kernel/string.o
+	i686-elf-ld -T kernel/hello_world.ld --oformat=binary -nostdlib -o kernel/hello_world.bin kernel/hello_world.o kernel/print.o kernel/hal.o kernel/gdt.o kernel/idt.o kernel/pic.o kernel/pit.o kernel/keyboard.o kernel/debug.o kernel/physical.o kernel/string.o kernel/page_table_entry.o kernel/page_directory_entry.o kernel/virtual.o
 
 printing: kernel/print.c
 	i686-elf-gcc -ffreestanding -std=c99 -c kernel/print.c -o kernel/print.o
@@ -44,6 +38,14 @@ physical: kernel/physical.c
 string: kernel/string.c
 	i686-elf-gcc -ffreestanding -std=c99 -c kernel/string.c -o kernel/string.o
 
+pagetable_entry: kernel/page_table_entry.c
+	i686-elf-gcc -ffreestanding -std=c99 -c kernel/page_table_entry.c -o kernel/page_table_entry.o
+
+page_directory_entry: kernel/page_directory_entry.c
+	i686-elf-gcc -ffreestanding -std=c99 -c kernel/page_directory_entry.c -o kernel/page_directory_entry.o
+
+virtual: kernel/virtual.c
+	i686-elf-gcc -ffreestanding -std=c99 -c kernel/virtual.c -o kernel/virtual.o
 
 run:
 	#qemu-img create -f raw tio_os.img 5K

@@ -56,6 +56,7 @@ void kernel_main() {
 
   __asm__("sti");
 
+  PrintString("Testing memory allocation: \n");
 
   // Test memory allocation.
   int* address_1 = (int *) MmapAllocateBlocks(1);
@@ -63,6 +64,7 @@ void kernel_main() {
   PrintString("Page [A] of size 1 is allocated at: ");
   PrintHex((int) address_1);
   PrintString("\n");
+
 
   int* address_1000 = (int *) MmapAllocateBlocks(1000);
   PrintString("Page [B] of size 1000 is allocated at: ");

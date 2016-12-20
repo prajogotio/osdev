@@ -6,17 +6,18 @@
 #include "print.h"
 #include "keyboard.h"
 #include "physical.h"
+#include "virtual.h"
 
 uint32_t * Hal_memory_information = 0;
 
-static void InitializePhysicalMemory();
+static void InitializeMemoryManagement();
 
 int HalInitialize() {
   InitializeGdt();
   InitializeIdt(0x8);
   InitializePic(0x20, 0x28);
   InitializePit();
-  InitializePhysicalMemory();
+  InitializeMemoryManagement();
   InitializeKeyboard();
   PitStartCounter(100, PIT_OCW_COUNTER_0, PIT_OCW_MODE_SQUAREWAVEGEN);
   PrintString("Done\n");
@@ -58,12 +59,12 @@ void SetInterruptVector(int intno, IRQ_HANDLER handler) {
   InstallInterruptHandler(intno, IDT_DESC_PRESENT|IDT_DESC_BIT32, 0x8, handler);
 }
 
-static void InitializePhysicalMemory() {
+static void InitializeMemoryManagement() {
   uint32_t kernel_size = *Hal_memory_information;
   uint32_t * memory_info = Hal_memory_information + 1;
   uint32_t * memory_map_table = Hal_memory_information + 5;
   PrintString("Kernel size: ");
-  PrintHex(kernel_size);
+  PrintInt(kernel_size);
   PrintString("\n");
   PrintString("Extended Memory between 1MB to 16MB (in KB): ");
   PrintHex((int) *memory_info);
@@ -84,22 +85,23 @@ static void InitializePhysicalMemory() {
   PrintString("MemoryMap entries: ");
 
   // Initialize memory map
-  int mmap_address = KERNEL_OFFSET + 512 * kernel_size;
+  // int mmap_address = KERNEL_OFFSET + kernel_size;
+  int mmap_address = KERNEL_OFFSET + kernel_size;
   PrintString("Initializing mmap at ");
   PrintHex(mmap_address);
   PrintString("\n");
   MmapInitialize(total_memory_in_kb * 1024, (uint32_t *) mmap_address);
 
-
   int entry_size = *memory_map_table;
-  PrintHex(entry_size);
+  PrintString("Number of SMAP entries: ");
+  PrintInt(entry_size);
   PrintString("\n");
 
   for (int index = 0; index < entry_size; ++index) {
     int offset = 1+index*6;
     uint32_t base_address = (int) *(memory_map_table + offset);
     uint32_t length = (uint32_t) *(memory_map_table + 2 + offset);
-    uint32_t type = (uint32_t) * (memory_map_table + 4 + offset);
+    uint32_t type = (uint32_t) * (memory_map_table + 4 + offset);    
     PrintString("E: ");
     PrintString("  Base address: ");
     PrintHex(base_address);
@@ -107,20 +109,27 @@ static void InitializePhysicalMemory() {
     PrintHex(length);
     PrintString("  Type: ");
     PrintHex(type);
+
     // PrintString("  ACPI_NULL: ");
     // PrintHex((int) *(memory_map_table+5+offset));
     PrintString("\n");
 
-    if (type == 1) {
 
+    if (type == 1) {
       MmapInitializeRegion(base_address, length);
     }
   }
 
   // Our kernel sector should be protected from allocation.
-  MmapDeinitializeRegion(KERNEL_OFFSET, 512*kernel_size + 4096);
+  // Also protect our Mmap table
+  // Since we map 3gb virtual 0x00100000 physical, use that physical base
+  MmapDeinitializeRegion(0x00100000, kernel_size + 4096);
+
   // Protect the first block of memory.
   MmapDeinitializeRegion(0, 4096);
+
   MmapSanityCheck();
 
+  // Reinitialize page directory table
+  VmmInitialize();
 }

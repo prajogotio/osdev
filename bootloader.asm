@@ -7,8 +7,8 @@ jmp loader
 %include "inc/load_from_disk.inc"
 %include "bootloader_test/print_hex.asm"
 
-KERNEL_SECTORS            dd 24
-KERNEL_STARTING_SECTOR    dd 4
+KERNEL_SECTORS            dd 50
+KERNEL_STARTING_SECTOR    dd 5
 KERNEL_COPY_BASE          dd 0x1000
 
 loader:

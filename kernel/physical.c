@@ -91,7 +91,7 @@ void MmapInitializeRegion(uint32_t base_address, size_t size) {
   }
 }
 
-void MmapDeinitializeRegion(uint32_t base_address, size_t size) {
+void MmapDeinitializeRegion(physical_addr base_address, size_t size) {
   // Deinitialize more than needed if not aligned.
   int alignment = base_address / BLOCK_ALIGN * BLOCK_ALIGN;
   size += alignment - base_address;
@@ -132,7 +132,9 @@ void MmapFreeBlock(void* block_address) {
 
 void* MmapAllocateBlocks(int size) {
   if (MmapGetFreeBlockCount() <= 0) return 0;
+
   int block_index = MmapGetFirstFreeBlocks(size);
+
   if (block_index == -1) return 0;
   for (int i = 0; i < size; ++i) {
     MmapSet(block_index + i);
@@ -146,6 +148,22 @@ void MmapFreeBlocks(void* block_address, int size) {
   for (; size >= 0; --size) {
     MmapUnset(block_index);
   }
+}
+
+void PmmEnablePaging(bool enable) {
+  if (enable) {
+    __asm__("mov %cr0, %eax\n\t"
+            "orl $0x80000000, %eax\n\t"
+            "mov %eax, %cr0\n\t");
+  } else {
+    __asm__("mov %cr0, %eax\n\t"
+            "orl $0x7FFFFFFF, %eax\n\t"
+            "mov %eax, %cr0\n\t");
+  }
+}
+
+void PmmLoadPdbr(physical_addr addr) {
+  __asm__("movl %%eax, %%cr3\n\t" : : "a"(addr));
 }
 
 void MmapSanityCheck() {
