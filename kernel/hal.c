@@ -20,7 +20,7 @@ int HalInitialize() {
   InitializeMemoryManagement();
   InitializeKeyboard();
   PitStartCounter(100, PIT_OCW_COUNTER_0, PIT_OCW_MODE_SQUAREWAVEGEN);
-  PrintString("Done\n");
+  PrintString("HAL Initialized!\n");
   return 0;
 }
 

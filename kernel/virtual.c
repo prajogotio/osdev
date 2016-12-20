@@ -1,5 +1,6 @@
 #include "virtual.h"
 #include "string.h"
+#include "print.h"
 
 struct pdirectory* current_directory_ = 0;
 physical_addr cur_pdbr_ = 0;
@@ -54,9 +55,21 @@ void VmmPtableClear(struct ptable* table) {
 }
 
 void VmmMapPage(void* physical, void* virtual) {
+  // PrintString("Mapping: ");
+  // PrintHex((physical_addr) physical);
+  // PrintString(" physical to ");
+  // PrintHex((virtual_addr) virtual);
+  // PrintString(" virtual\n");
+
   struct pdirectory* page_directory = current_directory_;
   page_directory_entry* e = VmmPdirectoryLookupEntry(page_directory, (virtual_addr) virtual);
-  if ((*e & PTE_PRESENT) != PTE_PRESENT) {
+
+  // PrintString("Directory entry index: ");
+  // PrintHex((uint32_t) e);
+  // PrintString("\n");
+  if ((*e & PDE_PRESENT) != PDE_PRESENT) {
+    // PrintString("Page directory entry is not present. Initialize one.\n");
+
     // Page table is not present. Allocate 1 block to hold the table.
     struct ptable * table = (struct ptable*) MmapAllocateBlocks(1);
     if (!table) return;
@@ -64,11 +77,29 @@ void VmmMapPage(void* physical, void* virtual) {
     PdeAddAttribute(e, PDE_PRESENT);
     PdeAddAttribute(e, PDE_WRITABLE);
     PdeSetFrame(e, (physical_addr) table);
+
+    // PrintString("Page table is created at: ");
+    // PrintHex((physical_addr) table);
+    // PrintString(" [physical] \n");
   }
   struct ptable* table = (struct ptable*) PAGE_GET_PHYSICAL_ADDRESS(e);
+  // PrintString("Page table is at: ");
+  // PrintHex((physical_addr) table);
+  // PrintString(" [physical]\n");
   pagetable_entry* page = VmmPtableLookupEntry(table, (virtual_addr) virtual);
+
+  // PrintString("page table entry index: ");
+  // PrintHex((uint32_t) page);
+  // PrintString("\n");
+
+
   PteSetFrame(page, (physical_addr) physical);
   PteAddAttribute(page, PTE_PRESENT);
+
+  // PrintString("Page entry: ");
+  // PrintHex(*page);
+  // PrintString("\n");
+
 }
 
 void VmmInitialize() {
@@ -90,7 +121,7 @@ void VmmInitialize() {
     *VmmPtableLookupEntry(table_default, virt) = page;
   }
 
-  // map 1mb to 3gb
+  // map 1mb physical to 3gb virtual
   for (int i = 0, frame=0x100000, virt=0xc0000000; i<1024;i++, frame+=4096, virt+=4096) {
     pagetable_entry page=0;
     PteAddAttribute(&page, PTE_PRESENT);
@@ -116,4 +147,32 @@ void VmmInitialize() {
   cur_pdbr_ = (physical_addr) directory;
   VmmSwitchPdirectory(directory);
   PmmEnablePaging(1);
+
+  PrintString("Pdbr is set at: ");
+  PrintHex((uint32_t) cur_pdbr_);
+  PrintString(" [physical]\n");
+
+  // Virtual 3gb - 1mb physical mapping test
+  PrintString("Test: Virtual 0xc0001234: ");
+  PrintHex(*(uint32_t*) 0xc0001234);
+  PrintString(" Physical 0x00101234: ");
+  PrintHex(*(uint32_t*) 0x00101234);  // identity mapping for first 4mb
+  PrintString("\n");
+
+  // Test VmmMap
+  // Memory mapping only works for pages.
+  uint32_t * some_memory = (uint32_t*) MmapAllocateBlocks(1);
+  *(some_memory+123) = 0xfaceface;
+  uint32_t * virtual_memory = 0xfefef000;
+  VmmMapPage((void*) some_memory, (void*) virtual_memory);
+  PrintString("Mapped "); PrintHex((physical_addr) some_memory); PrintString(" physical to "); PrintHex((virtual_addr) virtual_memory); PrintString(" virtual\n");
+  PrintString("Test entry: [virtual] ");
+  PrintHex((virtual_addr) (virtual_memory+123));
+  PrintString(" := ");
+  PrintHex(*(uint32_t*) (virtual_memory+123));
+  PrintString(" [physical] ");
+  PrintHex((physical_addr) (some_memory+123));
+  PrintString(" := ");
+  PrintHex(*(uint32_t*) (some_memory+123));
+  PrintString("\n");
 }
