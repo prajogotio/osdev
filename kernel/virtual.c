@@ -6,6 +6,8 @@ struct pdirectory* current_directory_ = 0;
 physical_addr cur_pdbr_ = 0;
 
 static void VmmPtableClear(struct ptable* table);
+static void VmmTest();
+static void PagefaultHandler();
 
 bool VmmAllocatePage(pagetable_entry* e) {
   void* frame_addr = MmapAllocateBlocks(1);
@@ -129,7 +131,6 @@ void VmmInitialize() {
     *VmmPtableLookupEntry(table_3gb, virt) = page;
   }
 
-
   struct pdirectory* directory = (struct pdirectory*) MmapAllocateBlocks(1);
   if (!directory) return;
   memset(directory, 0, BLOCK_SIZE);
@@ -148,6 +149,18 @@ void VmmInitialize() {
   VmmSwitchPdirectory(directory);
   PmmEnablePaging(1);
 
+  // Pagefault interrupt
+  SetInterruptVector(14, PagefaultHandler);
+
+  VmmTest();
+}
+
+static void PagefaultHandler() {
+  PrintString("*** Pagefault by JOGOG. Not implemented yet...");
+  for(;;);
+}
+
+static void VmmTest() {
   PrintString("Pdbr is set at: ");
   PrintHex((uint32_t) cur_pdbr_);
   PrintString(" [physical]\n");
@@ -163,7 +176,7 @@ void VmmInitialize() {
   // Memory mapping only works for pages.
   uint32_t * some_memory = (uint32_t*) MmapAllocateBlocks(1);
   *(some_memory+123) = 0xfaceface;
-  uint32_t * virtual_memory = 0xfefef000;
+  uint32_t * virtual_memory = (uint32_t*) 0xfefef000;
   VmmMapPage((void*) some_memory, (void*) virtual_memory);
   PrintString("Mapped "); PrintHex((physical_addr) some_memory); PrintString(" physical to "); PrintHex((virtual_addr) virtual_memory); PrintString(" virtual\n");
   PrintString("Test entry: [virtual] ");
@@ -175,4 +188,7 @@ void VmmInitialize() {
   PrintString(" := ");
   PrintHex(*(uint32_t*) (some_memory+123));
   PrintString("\n");
+
+  // Access memory that causes page fault
+  // int page_fault = *(uint32_t*) 0x05001234;
 }

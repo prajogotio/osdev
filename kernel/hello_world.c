@@ -56,6 +56,7 @@ void kernel_main() {
 
   __asm__("sti");
 
+
   PrintString("Testing memory allocation: \n");
 
   // Test memory allocation.
