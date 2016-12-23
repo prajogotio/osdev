@@ -57,6 +57,26 @@ void DebugPrintHex(unsigned int val) {
   DebugPrintString(hex);
 }
 
+
+void DebugPrintInt(int value) {
+  if (value < 0) {
+    DebugPrintString("-");
+    DebugPrintInt(-value);
+    return;
+  }
+  char* buffer = "????????????????";
+  int position = 15;
+  if (value == 0) {
+    buffer[position--] = '0';
+  } else {
+    while (value) {
+      buffer[position--] = '0' + (value % 10);
+      value /= 10;
+    }
+  }
+  DebugPrintString((char*) &buffer[position+1]);
+}
+
 void DebugMoveCursor(unsigned int x, unsigned int y) {
   cursorX_ = x;
   cursorY_ = y;

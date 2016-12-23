@@ -50,67 +50,21 @@ void kernel_main() {
   PrintString("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nScrolling seems to work. Let's initialize HAL...\n");
 
   HalInitialize();
+  ClearScreen();
+  __asm__("sti");
+
   PrintString("\n"
               "Welcome to Tio OS! The best OS ever!\n"
               "Timer and keyboard kinda works!\n");
 
-  __asm__("sti");
-
-
-  PrintString("Testing memory allocation: \n");
-
-  // Test memory allocation.
-  int* address_1 = (int *) MmapAllocateBlocks(1);
-  WriteToMemory(address_1, "[A] was here...");
-  PrintString("Page [A] of size 1 is allocated at: ");
-  PrintHex((int) address_1);
-  PrintString("\n");
-
-
-  int* address_1000 = (int *) MmapAllocateBlocks(1000);
-  PrintString("Page [B] of size 1000 is allocated at: ");
-  PrintHex((int) address_1000);
-  PrintString("\n");
-  
-  int* address_100 = (int *) MmapAllocateBlocks(100);
-  PrintString("Page [C] of size 100 is allocated at: ");
-  PrintHex((int) address_100);
-  PrintString("\n");
-
-  MmapFreeBlocks(address_1, 1);
-  PrintString("[A] is deallocated\n");
-
-  int* address_2 = (int *) MmapAllocateBlocks(1);
-  PrintString("Page [D] of size 1 is allocated at: ");
-  PrintHex((int) address_2);
-  PrintString("\n[D] checks what's on memory: ");
-  PrintString((char *)address_2);
-  PrintString("\n");
-
-  address_1 = (int *) MmapAllocateBlocks(1);
-  PrintString("[A] is reallocated at: ");
-  PrintHex((int) address_1);
-  PrintString("\n");
-
-
   for (;;) {
     DebugMoveCursor(0, 0);
-    DebugPrintString("Current tick count: ");
-    DebugPrintHex(PitGetTickCount());
-    DebugPrintString(" which is ");
-    DebugPrintHex(PitGetTickCount()/100);
-    DebugPrintString(" s                            ");
+    DebugPrintString("Uptime: ");
+    DebugPrintInt(PitGetTickCount()/100);
+    DebugPrintString("s");
   }
 
   __asm__("cli \n\t"
           "hlt \n\t");
 }
 
-
-static void WriteToMemory(void* position, char * str) {
-  char* index = (char *) position;
-  while (*str) {
-    *(index++) = *(str++);
-  }
-  *index = 0;
-}

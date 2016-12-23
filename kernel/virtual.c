@@ -1,6 +1,7 @@
 #include "virtual.h"
 #include "string.h"
 #include "print.h"
+#include "hal.h"
 
 struct pdirectory* current_directory_ = 0;
 physical_addr cur_pdbr_ = 0;

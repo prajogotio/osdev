@@ -112,24 +112,6 @@ static int MmapGetFreeBlockCount() {
   return (int) max_available_blocks_ - (int) current_used_blocks_;
 }
 
-void* MmapAllocateBlock() {
-  if (MmapGetFreeBlockCount() <= 0) {
-    return 0;
-  }
-  int free_block_index = MmapGetFirstFreeBlock();
-  if (free_block_index == -1) {
-    return 0;
-  }
-  MmapSet(free_block_index);
-  unsigned int physical_addr = free_block_index * BLOCK_SIZE;
-  return (void*) physical_addr;
-}
-
-void MmapFreeBlock(void* block_address) {
-  unsigned int block_index = (unsigned int) block_address / BLOCK_SIZE;
-  MmapUnset(block_index);
-}
-
 void* MmapAllocateBlocks(int size) {
   if (MmapGetFreeBlockCount() <= 0) return 0;
 
@@ -145,8 +127,8 @@ void* MmapAllocateBlocks(int size) {
 
 void MmapFreeBlocks(void* block_address, int size) {
   int block_index = (unsigned int) block_address / BLOCK_SIZE;
-  for (; size >= 0; --size) {
-    MmapUnset(block_index);
+  for (; size > 0; --size) {
+    MmapUnset(block_index++);
   }
 }
 
@@ -186,14 +168,21 @@ void MmapSanityCheck() {
     }
     if ((MmapTest(i) && run_size != 0) || (!MmapTest(i) && i == max_available_blocks_ - 1)) {
       if (run_size != 0) {
+        // special case: if this run extends till the end loop, increase i by 1 to remove off by one error
+        if (i == max_available_blocks_ - 1) {
+          ++i;
+        }
         PrintString("Run detected: size: ");
         PrintInt(run_size);
         PrintString(" [");
         int start = i - run_size;
         PrintHex(start * 4096);
         PrintString(" - ");
-        PrintHex((i-1) * 4096 - 1);
+        PrintHex(i * 4096 - 1);
         PrintString("]\n");
+        if (i == max_available_blocks_) {
+          break;
+        }
       }
     }
     if (MmapTest(i)) {

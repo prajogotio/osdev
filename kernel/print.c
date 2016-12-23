@@ -11,6 +11,8 @@ static int cursorY_ = 0;
 static void MoveToNextRow();
 static void UpdateCursorPosition();
 static void ScrollDown();
+static void DeleteOneChar();
+static void SetCharacter(char c);
 
 int GetCursorX() {
   return cursorX_;
@@ -23,11 +25,10 @@ int GetCursorY() {
 void PrintChar(char c) {
   if (c == '\n') {
     MoveToNextRow();
+  } else if (c == 8) {
+    DeleteOneChar();
   } else {
-    // VGA uses 2 bytes per character
-    char* vga_pointer = (char*) (VIDEO_MEMORY + cursorY_ * SCREEN_WIDTH * 2 + cursorX_ * 2);
-    *vga_pointer = c;
-    *(vga_pointer + 1) = 7;   // white on black
+    SetCharacter(c);
     ++cursorX_;
   }
   if (cursorX_ == SCREEN_WIDTH) {
@@ -40,6 +41,27 @@ void PrintChar(char c) {
   }
   UpdateCursorPosition();
 }
+
+static void SetCharacter(char c) {
+  // VGA uses 2 bytes per character
+    char* vga_pointer = (char*) (VIDEO_MEMORY + cursorY_ * SCREEN_WIDTH * 2 + cursorX_ * 2);
+    *vga_pointer = c;
+    *(vga_pointer + 1) = 7;   // white on black
+}
+
+static void DeleteOneChar() {
+  --cursorX_;
+  if (cursorX_ == -1) {
+    cursorX_ = SCREEN_WIDTH-1;
+    --cursorY_;
+  }
+  if (cursorY_ == -1) {
+    cursorY_ = 0;
+    cursorX_ = 0;
+  }
+  SetCharacter(0);
+}
+
 
 static void MoveToNextRow() {
   cursorX_ = 0;
