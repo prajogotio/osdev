@@ -4,9 +4,17 @@
 #include "pit.h"
 #include "stdint.h"
 #include "physical.h"
+#include "stdin_buffer.h"
+#include "string.h"
 
+#define BUFFER_SIZE 4096
 
-static void WriteToMemory(void* position, char * str);
+static char* CLI_PREFIX = "tio-os$ ";
+
+static char command_buffer_[BUFFER_SIZE];
+static int command_size_ = 0;
+static void HandleCommand();
+static void UpdateCommandBuffer(char c);
 
 void kernel_main() {
   __asm__("movw $0x10, %ax\n\t"
@@ -56,15 +64,42 @@ void kernel_main() {
   PrintString("\n"
               "Welcome to Tio OS! The best OS ever!\n"
               "Timer and keyboard kinda works!\n");
+  PrintString(CLI_PREFIX);
 
   for (;;) {
     DebugMoveCursor(0, 0);
     DebugPrintString("Uptime: ");
     DebugPrintInt(PitGetTickCount()/100);
     DebugPrintString("s");
+
+    while (!IsStdinBufferEmpty()) {
+      char curkey = ReadFromStdin();
+      PrintChar(curkey);
+      if (curkey == '\n') {
+        HandleCommand();
+      } else {
+        UpdateCommandBuffer(curkey);
+      }
+    }
   }
 
   __asm__("cli \n\t"
           "hlt \n\t");
 }
 
+static void UpdateCommandBuffer(char curkey) {
+  command_buffer_[command_size_++] = curkey;
+  command_buffer_[command_size_] = 0;
+}
+
+static void HandleCommand() {
+  if (strcmp("hello", command_buffer_) == 0) {
+    PrintString("Hello world!\n");
+  } else {
+    PrintString("Command not recognized: ");
+    PrintString(command_buffer_);
+    PrintString("\n");
+  }
+  command_size_ = 0;
+  PrintString(CLI_PREFIX);
+}

@@ -4,9 +4,9 @@ all: enter_protected_mode.asm bootloader.asm hello_world
 	cat bootloader.bin enter_protected_mode.bin kernel/hello_world.bin > tio_os.img
 	#dd if=/dev/zero bs=512 count=3 >> tio_os.img
 
-hello_world: kernel/hello_world.c kernel/hello_world.ld printing harware_abstraction_layer gdt idt pit pic keyboard debug physical string pagetable_entry page_directory_entry virtual
-	i686-elf-gcc -ffreestanding -std=c99 -c kernel/hello_world.c -o kernel/hello_world.o 
-	i686-elf-ld -T kernel/hello_world.ld --oformat=binary -nostdlib -o kernel/hello_world.bin kernel/hello_world.o kernel/print.o kernel/hal.o kernel/gdt.o kernel/idt.o kernel/pic.o kernel/pit.o kernel/keyboard.o kernel/debug.o kernel/physical.o kernel/string.o kernel/page_table_entry.o kernel/page_directory_entry.o kernel/virtual.o
+hello_world: kernel/hello_world.c kernel/hello_world.ld printing harware_abstraction_layer gdt idt pit pic keyboard debug physical string pagetable_entry page_directory_entry virtual stdin_buffer
+	i686-elf-gcc -ffreestanding -std=c99 -c kernel/hello_world.c -o kernel/hello_world.o
+	i686-elf-ld -T kernel/hello_world.ld --oformat=binary -nostdlib -o kernel/hello_world.bin kernel/hello_world.o kernel/print.o kernel/hal.o kernel/gdt.o kernel/idt.o kernel/pic.o kernel/pit.o kernel/keyboard.o kernel/debug.o kernel/physical.o kernel/string.o kernel/page_table_entry.o kernel/page_directory_entry.o kernel/virtual.o kernel/stdin_buffer.o
 
 printing: kernel/print.c
 	i686-elf-gcc -ffreestanding -std=c99 -c kernel/print.c -o kernel/print.o
@@ -46,6 +46,9 @@ page_directory_entry: kernel/page_directory_entry.c
 
 virtual: kernel/virtual.c
 	i686-elf-gcc -ffreestanding -std=c99 -c kernel/virtual.c -o kernel/virtual.o
+
+stdin_buffer: kernel/stdin_buffer.c
+	i686-elf-gcc -ffreestanding -std=c99 -c kernel/stdin_buffer.c -o kernel/stdin_buffer.o
 
 run:
 	#qemu-img create -f raw tio_os.img 5K

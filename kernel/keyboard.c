@@ -2,6 +2,7 @@
 #include "hal.h"
 #include "print.h"
 #include "stdint.h"
+#include "stdin_buffer.h"
 
 #define KEYBOARD_READ_PORT              0x60
 #define KEYBOARD_CONTROLLER_STATUS_PORT 0x64
@@ -126,7 +127,11 @@ static void HandleKeyboardEvent(char scan_code) {
       curkey = is_shift_on_ ? '|' : '\\';
     } else if (0x29 == scan_code) {
       curkey = is_shift_on_ ? '~' : '`';
+    } else {
+      // Return early since we can't handle this key
+      return;
     }
-    PrintChar(curkey);
+    PushToStdinBuffer(curkey);
+    //PrintChar(curkey);
   }
 }
