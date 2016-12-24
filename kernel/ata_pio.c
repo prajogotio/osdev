@@ -21,13 +21,16 @@ static void AtaPioIrqSecondary();
 
 static void AtaPioIrqPrimary() {
   __asm__("pusha");
+  PrintString("*** PRIMARY IRQ\n");
   __asm__("cld");   // REP INSW set to auto increment.
   __asm__("movl %0, %%edi" : : "r" (current_read_buffer_));
   // Specify port on which the data string will be read.
   __asm__("movl %0, %%dx" : : "i" (ATA_PIO_DATA_PORT));
-  // Repeat 256 times.
+  // Repeat 256 times (1 sector at a time)
   __asm__("movl $256, %cx");
   __asm__("rep insw");
+  AtaPioDelay400ns();
+  InterruptDone(14);
   __asm__("popa\n\t"
           "leave\n\t"
           "iret\n\t");
@@ -58,4 +61,12 @@ void AtaPioReadFromDisk(uint8_t ata_pio_target, uint32_t lba_28bit, uint8_t num_
   WriteToIoPort(ATA_PIO_SECTOR_LBA_28_2_PORT, (lba_28bit >> 8) & 0xff);
   WriteToIoPort(ATA_PIO_SECTOR_LBA_28_3_PORT, (lba_28bit >> 16) & 0xff);
   WriteToIoPort(ATA_PIO_CONTROLLER_PORT, ATA_PIO_READ_SECTORS_COMMAND);
+}
+
+void AtaPioDelay400ns() {
+  __asm__("mov $0x1f7, %dx\n\t"
+          "inb %dx, %al\n\t"
+          "inb %dx, %al\n\t"
+          "inb %dx, %al\n\t"
+          "inb %dx, %al\n\t");
 }
