@@ -50,4 +50,5 @@ stdin_buffer: kernel/stdin_buffer.c
 	i686-elf-gcc -ffreestanding -std=c99 -c kernel/stdin_buffer.c -o kernel/stdin_buffer.o
 
 run:
-	qemu-system-x86_64 -d guest_errors tio_os.img -m 256
+	qemu-img resize tio_os.img +10M
+	qemu-system-x86_64 -d guest_errors -hda tio_os.img -m 256

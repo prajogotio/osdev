@@ -28,6 +28,7 @@ main:
   ; Preparing stage 2
   mov si, DiskLoadedMsg
   call Puts16
+  
   cli
   xor ax, ax
   mov ds, ax

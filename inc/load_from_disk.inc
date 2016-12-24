@@ -4,7 +4,7 @@
 ; dl = boot drive
 ; es:bx = read buffer
 LoadFromDisk:
-  pusha
+  pushad
 
 ResetDisk:
   push ax
@@ -27,5 +27,6 @@ ReadFromDisk:
 
   jc ReadFromDisk
 
-  popa
+  popad
   ret
+
