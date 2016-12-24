@@ -16,7 +16,7 @@ extern void MmapDeinitializeRegion(uint32_t base_address, size_t size);
 extern void MmapFreeBlocks(void* block_address, int size);
 extern void* MmapAllocateBlocks(int size);
 
-extern void MmapSanityCheck();
+extern void MmapMemoryInformation();
 
 extern void PmmEnablePaging(bool);
 extern void PmmLoadPdbr(physical_addr);

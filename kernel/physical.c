@@ -148,8 +148,8 @@ void PmmLoadPdbr(physical_addr addr) {
   __asm__("movl %%eax, %%cr3\n\t" : : "a"(addr));
 }
 
-void MmapSanityCheck() {
-  PrintString("Sanity check:\n");
+void MmapMemoryInformation() {
+  PrintString("Memory status:\n");
   PrintString("Total blocks allocated: ");
   PrintInt(max_available_blocks_);
   PrintString(" Total blocks used: ");
@@ -190,11 +190,11 @@ void MmapSanityCheck() {
       run_size = 0;
     }
   }
-  PrintString("True count set: ");
+  PrintString("True count mem set: ");
   PrintInt(block_set);
-  PrintString(" True count unset: ");
+  PrintString(" True count mem unset: ");
   PrintInt(block_not_set);
-  PrintString(" True total: ");
+  PrintString(" True mem total: ");
   PrintInt(block_set + block_not_set);
   PrintString("\n");
 }

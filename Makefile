@@ -2,7 +2,6 @@ all: enter_protected_mode.asm bootloader.asm hello_world
 	nasm -f bin bootloader.asm -o bootloader.bin
 	nasm -f bin enter_protected_mode.asm -o enter_protected_mode.bin
 	cat bootloader.bin enter_protected_mode.bin kernel/hello_world.bin > tio_os.img
-	#dd if=/dev/zero bs=512 count=3 >> tio_os.img
 
 hello_world: kernel/hello_world.c kernel/hello_world.ld printing harware_abstraction_layer gdt idt pit pic keyboard debug physical string pagetable_entry page_directory_entry virtual stdin_buffer
 	i686-elf-gcc -ffreestanding -std=c99 -c kernel/hello_world.c -o kernel/hello_world.o
@@ -51,5 +50,4 @@ stdin_buffer: kernel/stdin_buffer.c
 	i686-elf-gcc -ffreestanding -std=c99 -c kernel/stdin_buffer.c -o kernel/stdin_buffer.o
 
 run:
-	#qemu-img create -f raw tio_os.img 5K
-	qemu-system-x86_64 -d guest_errors tio_os.img
+	qemu-system-x86_64 -d guest_errors tio_os.img -m 256

@@ -138,8 +138,6 @@ static void InitializeMemoryManagement() {
 static void MmapAllocationTesting() {
   PrintString("Testing memory allocation: \n");
 
-  MmapSanityCheck();
-
   // Test memory allocation.
   int* address_1 = (int *) MmapAllocateBlocks(1);
   WriteToMemory(address_1, "[A] was here...");
@@ -160,7 +158,6 @@ static void MmapAllocationTesting() {
   MmapFreeBlocks(address_1, 1);
   PrintString("[A] is deallocated\n");
 
-
   int* address_2 = (int *) MmapAllocateBlocks(1);
   PrintString("Page [D] of size 1 is allocated at: ");
   PrintHex((int) address_2);
@@ -168,27 +165,21 @@ static void MmapAllocationTesting() {
   PrintString((char *)address_2);
   PrintString("\n");
 
-  MmapSanityCheck();
-
   address_1 = (int *) MmapAllocateBlocks(1);
   PrintString("[A] is reallocated at: ");
   PrintHex((int) address_1);
   PrintString("\n");
 
-  MmapSanityCheck();
 
   MmapFreeBlocks(address_1, 1);
-  MmapSanityCheck();
 
   MmapFreeBlocks(address_2, 1);
-  MmapSanityCheck();
 
   MmapFreeBlocks(address_100, 100);
-  MmapSanityCheck();
 
   MmapFreeBlocks(address_1000, 1000);
 
-  MmapSanityCheck();
+  MmapMemoryInformation();
 }
 
 

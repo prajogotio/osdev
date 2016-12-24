@@ -74,10 +74,18 @@ void kernel_main() {
 
     while (!IsStdinBufferEmpty()) {
       char curkey = ReadFromStdin();
-      PrintChar(curkey);
       if (curkey == '\n') {
+        PrintChar(curkey);
         HandleCommand();
+      } else if (curkey == 8) {
+        // Backspace only if buffer is not empty
+        if (command_size_ > 0) {
+          command_buffer_[command_size_--] = 0;
+          command_buffer_[command_size_] = 0;
+          PrintChar(8);
+        }
       } else {
+        PrintChar(curkey);
         UpdateCommandBuffer(curkey);
       }
     }
@@ -95,11 +103,14 @@ static void UpdateCommandBuffer(char curkey) {
 static void HandleCommand() {
   if (strcmp("hello", command_buffer_) == 0) {
     PrintString("Hello world!\n");
+  } else if (strcmp("meminfo", command_buffer_) == 0) {
+    MmapMemoryInformation();
   } else {
     PrintString("Command not recognized: ");
     PrintString(command_buffer_);
     PrintString("\n");
   }
   command_size_ = 0;
+  command_buffer_[command_size_] = 0;
   PrintString(CLI_PREFIX);
 }
