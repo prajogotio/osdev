@@ -3,9 +3,9 @@
 
 #include "stdint.h"
 
-void PushToStdinBuffer(char c);
-char ReadFromStdin();
-bool IsStdinBufferEmpty();
+void StdinBufferWriteByte(char c);
+char StdinBufferReadByte();
+bool StdinBufferIsEmpty();
 
 
 #endif  //__TIO_OS_STDIN_BUFFER_H__

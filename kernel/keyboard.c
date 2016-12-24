@@ -38,13 +38,11 @@ static void KeyboardIrq();
 
 static void KeyboardIrq() {
   __asm__("pusha\n\t");
-  __asm__("cli\n\t");
   if (ReadFromIoPort(KEYBOARD_CONTROLLER_STATUS_PORT) & KEYBOARD_OUTPUT_STATUS_BIT) {
     char scan_code = ReadFromIoPort(KEYBOARD_READ_PORT);
     HandleKeyboardEvent(scan_code);
   }
   InterruptDone(1);
-  __asm__("sti\n\t");
   __asm__("popa\n\t"
           "leave\n\t"
           "iret\n\t");
@@ -131,7 +129,6 @@ static void HandleKeyboardEvent(char scan_code) {
       // Return early since we can't handle this key
       return;
     }
-    PushToStdinBuffer(curkey);
-    //PrintChar(curkey);
+    StdinBufferWriteByte(curkey);
   }
 }

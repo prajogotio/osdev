@@ -5,7 +5,6 @@
 #include "pit.h"
 #include "print.h"
 #include "keyboard.h"
-#include "physical.h"
 #include "virtual.h"
 
 uint32_t * Hal_memory_information = 0;
@@ -13,15 +12,17 @@ uint32_t * Hal_memory_information = 0;
 static void InitializeMemoryManagement();
 static void MmapAllocationTesting();
 static void WriteToMemory(void* position, char * str);
+static void InitializeDiskManager();
 
 int HalInitialize() {
   InitializeGdt();
   InitializeIdt(0x8);
   InitializePic(0x20, 0x28);
   InitializePit();
+  PitStartCounter(100, PIT_OCW_COUNTER_0, PIT_OCW_MODE_SQUAREWAVEGEN);
   InitializeMemoryManagement();
   InitializeKeyboard();
-  PitStartCounter(100, PIT_OCW_COUNTER_0, PIT_OCW_MODE_SQUAREWAVEGEN);
+  InitializeDiskManager();
   PrintString("HAL Initialized!\n");
   return 0;
 }
@@ -182,6 +183,9 @@ static void MmapAllocationTesting() {
   MmapMemoryInformation();
 }
 
+static void InitializeDiskManager() {
+  AtaPioInitialize();
+}
 
 static void WriteToMemory(void* position, char * str) {
   char* index = (char *) position;

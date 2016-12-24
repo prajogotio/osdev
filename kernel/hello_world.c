@@ -1,11 +1,6 @@
 #include "print.h"
 #include "debug.h"
 #include "hal.h"
-#include "pit.h"
-#include "stdint.h"
-#include "physical.h"
-#include "stdin_buffer.h"
-#include "string.h"
 
 #define BUFFER_SIZE 4096
 
@@ -72,8 +67,8 @@ void kernel_main() {
     DebugPrintInt(PitGetTickCount()/100);
     DebugPrintString("s");
 
-    while (!IsStdinBufferEmpty()) {
-      char curkey = ReadFromStdin();
+    while (!StdinBufferIsEmpty()) {
+      char curkey = StdinBufferReadByte();
       if (curkey == '\n') {
         PrintChar(curkey);
         HandleCommand();
