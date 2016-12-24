@@ -19,12 +19,16 @@
 #define ATA_PIO_READ_MODE   1
 #define ATA_PIO_WRITE_MODE  2
 
-static uint32_t current_read_buffer_pointer_ = -1;
-static uint32_t current_write_buffer_pointer_ = -1;
+static char* current_read_buffer_pointer_ = 0;
+static char* current_write_buffer_pointer_ = 0;
 static uint32_t number_of_sectors_to_process_ = 0;
 
 static int current_mode_ = -1;
+static bool current_read_done_ = 0;
 static char ata_lock_ = 0;
+static bool AtaPioLock();
+static void AtaPioUnlock();
+
 
 static void AtaPioIrqPrimary();
 static void AtaPioIrqSecondary();
@@ -35,10 +39,8 @@ static void AtaPioDelay400ns();
 static void AtaPioIrqPrimary() {
   __asm__("pusha");
   if (current_mode_ == ATA_PIO_READ_MODE) {
-    PrintString("*** PRIMARY READ IRQ\n");
     AtaPioIrqHandleRead();
   } else {
-    PrintString("*** PRIMARY WRITE IRQ\n");
     AtaPioIrqHandleWrite();
   }
   InterruptDone(14);
@@ -57,11 +59,12 @@ static void AtaPioIrqHandleRead() {
   __asm__("movl $256, %cx");
   __asm__("rep insw");
   // Advance buffer pointer by 512 bytes.
-  current_read_buffer_pointer_ += 128;
+  current_read_buffer_pointer_ += 512;
   --number_of_sectors_to_process_;
   // Allow for 400ns delay to allow the controller to update its status.
   AtaPioDelay400ns();
   if (number_of_sectors_to_process_ == 0) {
+    current_read_done_ = 1;
     AtaPioUnlock();
   }
 }
@@ -73,17 +76,17 @@ static void AtaPioIrqHandleWrite() {
     AtaPioUnlock();
     return;
   }
-
   __asm__("cld");   // OUTSW set to auto increment.  
   __asm__("movl %0, %%esi" : : "r" (current_write_buffer_pointer_));  
   // Specify port on which the data string will be read.
   __asm__("movw %0, %%dx" : : "i" (ATA_PIO_DATA_PORT));  
   // Repeat 256 times
+  int write_out = 0;
   for (int i = 0; i < 256; ++i) {
     __asm__("outsw");
   }
   // Advance buffer pointer by 512 bytes.
-  current_write_buffer_pointer_ += 128;
+  current_write_buffer_pointer_ += 512;
   --number_of_sectors_to_process_;
   // Allow for 400ns delay to allow the controller to update its status.
   AtaPioDelay400ns();
@@ -104,12 +107,13 @@ void AtaPioInitialize() {
   SetInterruptVector(0x20 + 15, AtaPioIrqSecondary);
 }
 
-void AtaPioReadFromDisk(uint8_t ata_pio_target, uint32_t lba_28bit, uint8_t num_of_sectors, uint32_t read_buffer) {
+void AtaPioReadFromDisk(uint8_t ata_pio_target, uint32_t lba_28bit, uint8_t num_of_sectors, char* read_buffer) {
   while (!AtaPioLock());
 
   current_read_buffer_pointer_ = read_buffer;
   current_mode_ = ATA_PIO_READ_MODE;
   number_of_sectors_to_process_ = num_of_sectors;
+  current_read_done_ = 0;
 
   uint8_t cmd = ata_pio_target | ((lba_28bit >> 24) & 0xf);
   WriteToIoPort(ATA_PIO_DRIVE_PORT, cmd);
@@ -122,9 +126,12 @@ void AtaPioReadFromDisk(uint8_t ata_pio_target, uint32_t lba_28bit, uint8_t num_
   WriteToIoPort(ATA_PIO_CONTROLLER_PORT, ATA_PIO_READ_SECTORS_COMMAND);
 
   AtaPioDelay400ns();
+
+  // Blocking implementation
+  while (!current_read_done_);
 }
 
-void AtaPioWriteToDisk(uint8_t ata_pio_target, uint32_t lba_28bit, uint8_t num_of_sectors, uint32_t write_buffer) {
+void AtaPioWriteToDisk(uint8_t ata_pio_target, uint32_t lba_28bit, uint8_t num_of_sectors, char* write_buffer) {
   while (!AtaPioLock());
 
   current_write_buffer_pointer_ = write_buffer;

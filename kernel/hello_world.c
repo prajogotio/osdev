@@ -60,13 +60,6 @@ void kernel_main() {
               "Welcome to Tio OS! The best OS ever!\n"
               "Timer and keyboard kinda works!\n");
   PrintString(CLI_PREFIX);
-  AtaPioReadFromDisk(ATA_PIO_MASTER, 0x1000, 5, 0x100);
-  AtaPioWriteToDisk(ATA_PIO_MASTER, 0x1000, 4, 0x100);
-  AtaPioReadFromDisk(ATA_PIO_MASTER, 0x1000, 5, 0x100);
-  AtaPioWriteToDisk(ATA_PIO_MASTER, 0x1000, 4, 0x100);
-
-
-
 
   for (;;) {
     DebugMoveCursor(0, 0);

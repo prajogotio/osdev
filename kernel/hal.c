@@ -13,6 +13,7 @@ static void InitializeMemoryManagement();
 static void MmapAllocationTesting();
 static void WriteToMemory(void* position, char * str);
 static void InitializeDiskManager();
+static void TestAtaPioReadWrite();
 
 int HalInitialize() {
   InitializeGdt();
@@ -185,6 +186,23 @@ static void MmapAllocationTesting() {
 
 static void InitializeDiskManager() {
   AtaPioInitialize();
+}
+
+static void TestAtaPioReadWrite() {
+  __asm__("sti");
+  // Request 10 pages for experimentation
+  physical_addr blocks10 = MmapAllocateBlocks(10);
+  char * d = 0xfefe0000;
+  for (int i = 0; i < 10; ++i) {
+    VmmMapPage(blocks10 + 0x1000 * i, d + 0x1000 * i);
+  }
+  memset(d, 0, 0x1000*10);
+  memset(d, 'A', 0x2000);
+
+  AtaPioWriteToDisk(ATA_PIO_MASTER, 0x3000, 16, d);
+  AtaPioReadFromDisk(ATA_PIO_MASTER, 0x3000, 16, d + 0x1000*8);
+  PrintHex(*(d+0x1000*10-1));
+  for(;;);
 }
 
 static void WriteToMemory(void* position, char * str) {
