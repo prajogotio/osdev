@@ -54,9 +54,9 @@ static void AtaPioIrqHandleRead() {
   __asm__("cld");   // REP INSW set to auto increment.
   __asm__("movl %0, %%edi" : : "r" (current_read_buffer_pointer_));
   // Specify port on which the data string will be read.
-  __asm__("movl %0, %%dx" : : "i" (ATA_PIO_DATA_PORT));
+  __asm__("movl %0, %%edx" : : "i" (ATA_PIO_DATA_PORT));
   // Repeat 256 times (1 sector at a time)
-  __asm__("movl $256, %cx");
+  __asm__("movl $256, %ecx");
   __asm__("rep insw");
   // Advance buffer pointer by 512 bytes.
   current_read_buffer_pointer_ += 512;

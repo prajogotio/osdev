@@ -34,6 +34,7 @@ extern page_directory_entry* VmmPdirectoryLookupEntry(struct pdirectory* p, virt
 extern bool VmmSwitchPdirectory(struct pdirectory* directory);
 extern void VmmFlushTlbEntry(virtual_addr addr);
 extern void VmmMapPage(void* physical, void* virtual);
+extern void* VmmGetPhysicalAddress(void* virtual);
 extern void VmmInitialize();
 
 

@@ -21,3 +21,9 @@ int strcmp(char* first, char* second) {
   if (*first == *second) return 0;
   return *first > *second ? 1 : -1;
 }
+
+extern void memcpy(char* source, char* dest, size_t size) {
+  for (; size > 0; --size) {
+    *dest++ = *source++;
+  }
+}
