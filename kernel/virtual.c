@@ -147,7 +147,7 @@ void VmmInitialize() {
   // Pagefault interrupt
   SetInterruptVector(14, PagefaultHandler);
 
-  VmmTest();
+  // VmmTest();
 }
 
 static void PagefaultHandler() {
@@ -198,7 +198,7 @@ static void VmmTest() {
   PrintString("Remap to ");
   PrintHex((int) new_memory_block);
   PrintString("\n");
-  VmmMapPage((void*) new_memory_block, (void*) virtual_memory);
+  VmmMapPage((void*) new_memory_block, (void*) virtual_memory);  
   PrintString("Canary test (before TLB flush): ");
   PrintHex(*(virtual_memory+123));
   PrintString("\n");
@@ -206,6 +206,21 @@ static void VmmTest() {
   PrintString("Canary test (after TLB flush): ");
   PrintHex(*(virtual_memory+123));
   PrintString("\n");
+  PrintString("New physical memory: ");
+  PrintHex((int)VmmGetPhysicalAddress(virtual_memory));
+  PrintString("\n");
+
+  MmapFreeBlocks(some_memory, 1);
+
+  // Remove page entry
+  struct ptable* cur_ptable = GetPageTablePointer(virtual_memory);
+  pagetable_entry* cur_page = VmmPtableLookupEntry(cur_ptable, virtual_memory);
+  VmmFreePage(cur_page);
+  PrintString("Delete page. Before invalidation:");
+  PrintHex(*(virtual_memory+123));
+  PrintString("\n after:");
+  VmmFlushTlbEntry(virtual_memory);
+  PrintHex(*(virtual_memory+123));
   for(;;);
 }
 
