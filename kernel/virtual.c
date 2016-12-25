@@ -49,9 +49,7 @@ inline bool VmmSwitchPdirectory(struct pdirectory* directory) {
 }
 
 void VmmFlushTlbEntry(virtual_addr addr) {
-  __asm__("cli\n\t"
-          "invlpg %0\n\t"
-          "sti\n\t" : : "m" (addr));
+  __asm__("invlpg (%0)\n\t" : : "b" (addr) : "memory" );
 }
 
 void VmmPtableClear(struct ptable* table) {
@@ -193,6 +191,22 @@ static void VmmTest() {
   PrintHex((int)VmmGetPhysicalAddress(virtual_memory));
   PrintString(" [physical]\n");
 
+  // Test invalidation of page table.
+  uint32_t * new_memory_block = (uint32_t*) MmapAllocateBlocks(1);
+  // Canary
+  *(new_memory_block+123) = 0xcacafefe;
+  PrintString("Remap to ");
+  PrintHex((int) new_memory_block);
+  PrintString("\n");
+  VmmMapPage((void*) new_memory_block, (void*) virtual_memory);
+  PrintString("Canary test (before TLB flush): ");
+  PrintHex(*(virtual_memory+123));
+  PrintString("\n");
+  VmmFlushTlbEntry((virtual_addr) virtual_memory);
+  PrintString("Canary test (after TLB flush): ");
+  PrintHex(*(virtual_memory+123));
+  PrintString("\n");
+  for(;;);
 }
 
 void* VmmGetPhysicalAddress(void* virtual) {
