@@ -6,6 +6,9 @@
 static struct pdirectory* current_directory_ = 0;
 static physical_addr cur_pdbr_ = 0;
 
+static int error_code_ = 0;
+static virtual_addr pagefault_address_ = 0;
+
 static void VmmPtableClear(struct ptable* table);
 static void VmmTest();
 static void PagefaultHandler();
@@ -150,18 +153,35 @@ void VmmInitialize() {
 }
 
 static void PagefaultHandler() {
-  int error_code = 0;
-  int address = 0;
-  __asm__("popl %0" : "=r"(error_code) :);
-  __asm__("movl %%cr2, %0" : "=r"(address) :);
-  PrintString("*** Pagefault handling not implemented yet. Pagefault information:\n");
+  // Error code should be placed right on top of ebp
+  __asm__("movl 4(%%ebp), %0" : "=r"(error_code_):);
+  __asm__("pusha");
+  __asm__("movl %%cr2, %0" : "=r"(pagefault_address_) :);
+
+  PrintString("*** Pagefault handling partially implemented. Pagefault information:\n");
   PrintString("Error code: ");
-  PrintHex(error_code);
+  PrintHex(error_code_);
   PrintString("\n");
   PrintString("Page fault address: ");
-  PrintHex(address);
+  PrintHex(pagefault_address_);
   PrintString("\n");
-  for(;;);
+
+  // Only handle the case where page fault is caused by a new virtual address
+  // being assigned a physical address for the first time.
+  // The case where virtual address is brought back from disk is not yet
+  // implemented.
+  physical_addr new_page = (physical_addr) MmapAllocateBlocks(1);
+  VmmMapPage(new_page, (virtual_addr) (pagefault_address_ & ~0xfff));
+
+  PrintString("Physical Addr: ");
+  PrintHex(new_page);
+  PrintString("\n");
+
+  __asm__("popa");
+  __asm__("leave");
+  // Pop error_code off the stack
+  __asm__("addl $4, %esp");
+  __asm__("iret");
 }
 
 static void VmmTest() {
@@ -227,9 +247,11 @@ static void VmmTest() {
   VmmFreePage(cur_page);
   PrintString("Delete page. Before invalidation:");
   PrintHex(*(virtual_memory+123));
-  PrintString("\n after:");
+  PrintString("\n after:\n");
   VmmFlushTlbEntry((virtual_addr) virtual_memory);
   PrintHex(*(virtual_memory+123));
+  PrintString("\nnew physical_addr: ");
+  PrintHex(VmmGetPhysicalAddress(virtual_memory));
   for(;;);
 }
 
