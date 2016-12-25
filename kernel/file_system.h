@@ -3,23 +3,31 @@
 
 #include "stdint.h"
 
+#define EMPTY_TYPE       0
+#define DIRECTORY_TYPE   1
+#define FILE_TYPE        2
+
 typedef uint32_t logical_block_addr;    // Only the first 28 bits are used.
 
 struct __attribute__ ((packed)) FileDescriptor {
   char name[32];
   logical_block_addr start_addr;
-  bool is_directory;
+  int type;
   int filesize;
 };
 
-struct __attribute__ ((packed)) File{
+struct __attribute__ ((packed)) File {
   struct FileDescriptor* file_descriptor;
   int cursor;
-}
+};
+
+// Directory creation, deletion and traversal
+extern void FileSystemInitialize(struct FileDescriptor* dir_desc);
+extern bool CreateDir(char* dirname);
+extern void ListDirectoryContent();
 
 // Given a filename, set the file descriptor to contain relevant information of
 // the corresponding file. Returns true if the file is found.
-extern bool OpenFile(char* filename, struct FileDescriptor* file);
-extern int ReadFile(struct FileDescriptor* fp, char* buffer, size_t read_size);
-
+extern bool OpenFile(struct File* file, char* filename);
+extern int ReadFile(struct File* fp, char* buffer, size_t read_size);
 #endif  //__TIO_OS_FILE_SYSTEM_H__

@@ -3,13 +3,13 @@
 #include "print.h"
 #include "hal.h"
 
-struct pdirectory* current_directory_ = 0;
-physical_addr cur_pdbr_ = 0;
+static struct pdirectory* current_directory_ = 0;
+static physical_addr cur_pdbr_ = 0;
 
 static void VmmPtableClear(struct ptable* table);
 static void VmmTest();
 static void PagefaultHandler();
-static struct ptable* GetPageTablePointer(virtual_addr virtual);
+static struct ptable* VmmGetPageTablePointer(virtual_addr virtual);
 
 bool VmmAllocatePage(pagetable_entry* e) {
   void* frame_addr = MmapAllocateBlocks(1);
@@ -72,18 +72,18 @@ void VmmMapPage(void* physical, void* virtual) {
     PdeSetFrame(e, ptable_addr);
 
     // Retrieve the page table
-    struct ptable * table = GetPageTablePointer((virtual_addr) virtual);
+    struct ptable * table = VmmGetPageTablePointer((virtual_addr) virtual);
     memset(table, 0, BLOCK_SIZE);
   }
 
-  struct ptable* table = GetPageTablePointer((virtual_addr) virtual);
+  struct ptable* table = VmmGetPageTablePointer((virtual_addr) virtual);
   pagetable_entry* page = VmmPtableLookupEntry(table, (virtual_addr) virtual);
 
   PteSetFrame(page, (physical_addr) physical);
   PteAddAttribute(page, PTE_PRESENT);
 }
 
-static struct ptable* GetPageTablePointer(virtual_addr virtual) {
+static struct ptable* VmmGetPageTablePointer(virtual_addr virtual) {
   // Compute index to directory table
   uint32_t index = PAGE_DIRECTORY_INDEX(virtual);
   // Create the address usable for recursive ptable mapping address resolution
@@ -146,12 +146,21 @@ void VmmInitialize() {
 
   // Pagefault interrupt
   SetInterruptVector(14, PagefaultHandler);
-
   // VmmTest();
 }
 
 static void PagefaultHandler() {
-  PrintString("*** Pagefault by JOGOG. Not implemented yet...");
+  int error_code = 0;
+  int address = 0;
+  __asm__("popl %0" : "=r"(error_code) :);
+  __asm__("movl %%cr2, %0" : "=r"(address) :);
+  PrintString("*** Pagefault handling not implemented yet. Pagefault information:\n");
+  PrintString("Error code: ");
+  PrintHex(error_code);
+  PrintString("\n");
+  PrintString("Page fault address: ");
+  PrintHex(address);
+  PrintString("\n");
   for(;;);
 }
 
@@ -213,19 +222,19 @@ static void VmmTest() {
   MmapFreeBlocks(some_memory, 1);
 
   // Remove page entry
-  struct ptable* cur_ptable = GetPageTablePointer(virtual_memory);
-  pagetable_entry* cur_page = VmmPtableLookupEntry(cur_ptable, virtual_memory);
+  struct ptable* cur_ptable = VmmGetPageTablePointer((virtual_addr)virtual_memory);
+  pagetable_entry* cur_page = VmmPtableLookupEntry(cur_ptable, (virtual_addr) virtual_memory);
   VmmFreePage(cur_page);
   PrintString("Delete page. Before invalidation:");
   PrintHex(*(virtual_memory+123));
   PrintString("\n after:");
-  VmmFlushTlbEntry(virtual_memory);
+  VmmFlushTlbEntry((virtual_addr) virtual_memory);
   PrintHex(*(virtual_memory+123));
   for(;;);
 }
 
 void* VmmGetPhysicalAddress(void* virtual) {
-  struct ptable* table = GetPageTablePointer((virtual_addr) virtual);
+  struct ptable* table = VmmGetPageTablePointer((virtual_addr) virtual);
   pagetable_entry* entry = VmmPtableLookupEntry(table, (virtual_addr) virtual);
   physical_addr addr = (physical_addr) PAGE_GET_PHYSICAL_ADDRESS(entry);
   // virtual & 0xfff computes the 12 bit offset into page block.

@@ -27,3 +27,10 @@ extern void memcpy(char* source, char* dest, size_t size) {
     *dest++ = *source++;
   }
 }
+
+extern void strcpy(char* source, char* dest) {
+  while (*source != 0) {
+    *dest++ = *source++;
+  }
+  *dest = 0;
+}

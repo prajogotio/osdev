@@ -3,9 +3,9 @@ all: enter_protected_mode.asm bootloader.asm hello_world
 	nasm -f bin enter_protected_mode.asm -o enter_protected_mode.bin
 	cat bootloader.bin enter_protected_mode.bin kernel/hello_world.bin > tio_os.img
 
-hello_world: kernel/hello_world.c kernel/hello_world.ld printing harware_abstraction_layer gdt idt pit pic keyboard debug physical string pagetable_entry page_directory_entry virtual stdin_buffer ata_pio
+hello_world: kernel/hello_world.c kernel/hello_world.ld printing harware_abstraction_layer gdt idt pit pic keyboard debug physical string pagetable_entry page_directory_entry virtual stdin_buffer ata_pio file_system
 	i686-elf-gcc -ffreestanding -std=c99 -c kernel/hello_world.c -o kernel/hello_world.o
-	i686-elf-ld -T kernel/hello_world.ld --oformat=binary -nostdlib -o kernel/hello_world.bin kernel/hello_world.o kernel/print.o kernel/hal.o kernel/gdt.o kernel/idt.o kernel/pic.o kernel/pit.o kernel/keyboard.o kernel/debug.o kernel/physical.o kernel/string.o kernel/page_table_entry.o kernel/page_directory_entry.o kernel/virtual.o kernel/stdin_buffer.o kernel/ata_pio.o
+	i686-elf-ld -T kernel/hello_world.ld --oformat=binary -nostdlib -o kernel/hello_world.bin kernel/hello_world.o kernel/print.o kernel/hal.o kernel/gdt.o kernel/idt.o kernel/pic.o kernel/pit.o kernel/keyboard.o kernel/debug.o kernel/physical.o kernel/string.o kernel/page_table_entry.o kernel/page_directory_entry.o kernel/virtual.o kernel/stdin_buffer.o kernel/ata_pio.o kernel/file_system.o
 
 printing: kernel/print.c
 	i686-elf-gcc -ffreestanding -std=c99 -c kernel/print.c -o kernel/print.o
@@ -51,6 +51,9 @@ stdin_buffer: kernel/stdin_buffer.c
 
 ata_pio: kernel/ata_pio.c
 	i686-elf-gcc -ffreestanding -std=c99 -c kernel/ata_pio.c -o kernel/ata_pio.o
+
+file_system: kernel/file_system.c
+	i686-elf-gcc -ffreestanding -std=c99 -c kernel/file_system.c -o kernel/file_system.o
 
 run:
 	qemu-img resize tio_os.img +10M

@@ -9,11 +9,14 @@
 
 uint32_t * Hal_memory_information = 0;
 
+static struct FileDescriptor root_directory_;
+
 static void InitializeMemoryManagement();
 static void MmapAllocationTesting();
 static void WriteToMemory(void* position, char * str);
 static void InitializeDiskManager();
 static void TestAtaPioReadWrite();
+static void InitializeFileSystem();
 
 int HalInitialize() {
   InitializeGdt();
@@ -24,22 +27,13 @@ int HalInitialize() {
   InitializeMemoryManagement();
   InitializeKeyboard();
   InitializeDiskManager();
+  InitializeFileSystem();
   PrintString("HAL Initialized!\n");
   return 0;
 }
 
 int HalShutdown() {
   return 0;
-}
-
-void GenerateInterrupt(int n) {
-  // broken.
-  __asm__(
-    "movl generate_interrupt, %%ebx\n\t"
-    "movb %0, 1(%%ebx)\n\t"
-    "generate_interrupt:\n\t"
-    "int $0\n\t"
-    : : "a" (n));
 }
 
 
@@ -89,8 +83,10 @@ static void InitializeMemoryManagement() {
   PrintString("MemoryMap entries: ");
 
   // Initialize memory map
-  // int mmap_address = KERNEL_OFFSET + kernel_size;
-  int mmap_address = KERNEL_OFFSET + kernel_size;
+  // int mmap_address = KERNEL_OFFSET + kernel_size + 4096;
+  // Why additional 4096? Because we want to give room for data & bss sector
+  // (initialized & uninitialized data resp.)
+  int mmap_address = KERNEL_OFFSET + kernel_size + 4096;
   PrintString("Initializing mmap at ");
   PrintHex(mmap_address);
   PrintString("\n");
@@ -124,9 +120,9 @@ static void InitializeMemoryManagement() {
     }
   }
   // Our kernel sector should be protected from allocation.
-  // Also protect our Mmap table
+  // Also protect our DATA/BSS section and Mmap table
   // Since we map 3gb virtual 0x00100000 physical, use that physical base
-  MmapDeinitializeRegion(0x00100000, kernel_size + 4096);
+  MmapDeinitializeRegion(0x00100000, kernel_size + 4096 + 4096);
 
   // Protect the first block of memory.
   MmapDeinitializeRegion(0, 4096);
@@ -186,7 +182,7 @@ static void MmapAllocationTesting() {
 
 static void InitializeDiskManager() {
   AtaPioInitialize();
-  // TestAtaPioReadWrite();
+  //TestAtaPioReadWrite();
 }
 
 static void TestAtaPioReadWrite() {
@@ -213,4 +209,13 @@ static void WriteToMemory(void* position, char * str) {
     *(index++) = *(str++);
   }
   *index = 0;
+}
+
+
+static void InitializeFileSystem() {
+  root_directory_.name[0] = '/';
+  root_directory_.name[1] = 0;
+  root_directory_.start_addr = 500 * 1024 / 512; // File system start at 500KB mark in disk
+  root_directory_.type = DIRECTORY_TYPE;
+  FileSystemInitialize(&root_directory_);
 }
