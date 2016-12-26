@@ -2,6 +2,7 @@
 #include "physical.h"
 #include "virtual.h"
 #include "string.h"
+#include "print.h"
 
 #define KMALLOC_BASE_ADDR 0xf0000000
 
@@ -100,7 +101,7 @@ void* kmalloc(size_t size) {
     // We cannot find suitable allocation.
     return 0;
   }
-  void* ret_addr = ptr->start;
+  void* ret_addr = (void*) ptr->start;
 
   // Allocate this one! (First fit allocation)
 
@@ -190,13 +191,13 @@ static void KmallocDisplayLists() {
     struct KmallocNode* testptr = free_list_head_->next;
     while (testptr != free_list_head_) {
       PrintString("[");
-      PrintHex(testptr->start);
+      PrintHex((int)testptr->start);
       PrintString(", ");
       PrintInt(testptr->size);
       PrintString(", ");
-      PrintHex(testptr->prev);
+      PrintHex((int)testptr->prev);
       PrintString(", ");
-      PrintHex(testptr->next);
+      PrintHex((int)testptr->next);
       PrintString("] -> ");
       testptr = testptr->next;
     }
@@ -207,9 +208,9 @@ static void KmallocDisplayLists() {
     struct KmallocNode* testptr = free_pointer_->next;
     while (testptr != free_pointer_) {
       PrintString("[");
-      PrintHex(testptr->prev);
+      PrintHex((int)testptr->prev);
       PrintString(", ");
-      PrintHex(testptr->next);
+      PrintHex((int)testptr->next);
       PrintString("]");
 
       testptr = testptr->next;
