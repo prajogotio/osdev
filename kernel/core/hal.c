@@ -7,6 +7,7 @@
 #include "keyboard.h"
 #include "virtual.h"
 #include "kmalloc.h"
+#include "file_system.h"
 
 uint32_t * Hal_memory_information = 0;
 

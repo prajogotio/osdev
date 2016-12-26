@@ -75,7 +75,7 @@ bool ChangeDir(char * dirname) {
       break;
     }
     if (fd->type == DIRECTORY_TYPE && strcmp(fd->name, dirname) == 0) {
-      memcpy(fd, cwd_, sizeof(struct FileDescriptor));
+      memcpy((char*) fd, (char*) cwd_, sizeof(struct FileDescriptor));
       return 1;
     }
   }
