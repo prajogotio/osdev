@@ -132,22 +132,25 @@ ClearScreen32:
 ; ecx the number
 PrintHex32:
   pusha
+  mov edx, 8
+
   mov bl, ' '
   call Putch32
   mov bl, 'X'
   call Putch32
 PrintHex32_While:
-  or ecx, ecx
-
-  je PrintHex32_Done
 
   xor ebx, ebx
   mov bl, cl
   and bl, 0xf
-  mov bl, [HexCharacter + bx]
+  mov bl, byte [HexCharacter + bx]
   call Putch32
 
   shr ecx, 4
+
+  dec edx
+  je PrintHex32_Done
+  
   jmp PrintHex32_While
 
 PrintHex32_Done:
