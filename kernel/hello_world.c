@@ -1,6 +1,8 @@
 #include "core/print.h"
 #include "core/debug.h"
 #include "core/hal.h"
+#include "core/kmalloc.h"
+#include "lib/string_tokenizer.h"
 
 #define BUFFER_SIZE 4096
 
@@ -10,6 +12,7 @@ static char command_buffer_[BUFFER_SIZE];
 static int command_size_ = 0;
 static void HandleCommand();
 static void UpdateCommandBuffer(char c);
+static bool DetectMultiwordCommand();
 
 void kernel_main() {
   __asm__("movw $0x10, %ax\n\t"
@@ -27,7 +30,7 @@ void kernel_main() {
 
   HalInitialize();
   ClearScreen();
-  
+
   __asm__("sti");
 
   PrintString("\n"
@@ -70,11 +73,19 @@ static void UpdateCommandBuffer(char curkey) {
 }
 
 static void HandleCommand() {
+  bool command_found = 1;
+  // One word command
   if (strcmp("hello", command_buffer_) == 0) {
     PrintString("Hello world!\n");
   } else if (strcmp("meminfo", command_buffer_) == 0) {
     MmapMemoryInformation();
+  } else if (strcmp("ls", command_buffer_) == 0) {
+    ListDirectoryContent();
   } else {
+    command_found = DetectMultiwordCommand();
+  }
+
+  if (!command_found) {
     PrintString("Command not recognized: ");
     PrintString(command_buffer_);
     PrintString("\n");
@@ -82,4 +93,32 @@ static void HandleCommand() {
   command_size_ = 0;
   command_buffer_[command_size_] = 0;
   PrintString(CLI_PREFIX);
+}
+
+static bool DetectMultiwordCommand() {
+  struct StringTokenizer* tokenizer = (struct StringTokenizer*) kmalloc(sizeof(struct StringTokenizer));
+  memset(tokenizer, 0, sizeof(struct StringTokenizer));
+  char* token = (char*) kmalloc(sizeof(4096));
+  memset(token, 0, 4096);
+
+  bool command_found = 1;
+  StringTokenizer_Initialize(tokenizer, command_buffer_, ' ');
+  { // First phase: check if command is recognized
+    StringTokenizer_GetNext(tokenizer, token);
+    if (strcmp(token, "mkdir") == 0) {
+      command_found = 1;
+      if (StringTokenizer_GetNext(tokenizer, token) && strlen(token) != 0) {
+        CreateDir(token);
+        PrintString("Directory created: ");
+        PrintString(token);
+        PrintString("\n");
+      } else {
+        PrintString("Error: mkdir: no directory name supplied\n");
+      }
+    }
+  }
+  // Deallocate all memory
+  kfree(tokenizer);
+  kfree(token);
+  return command_found;
 }

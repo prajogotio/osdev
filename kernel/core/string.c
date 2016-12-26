@@ -34,3 +34,9 @@ extern void strcpy(char* source, char* dest) {
   }
   *dest = 0;
 }
+
+extern size_t strlen(char* str) {
+  int len = 0;
+  while (*str++) ++len;
+  return len;
+}

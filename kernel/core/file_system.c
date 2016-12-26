@@ -62,6 +62,7 @@ void ListDirectoryContent() {
     PrintHex(fd->start_addr);
     PrintString("\n");
   }
+  PrintString("\n");
   // TODO: handle next block of directory entry
 }
 
