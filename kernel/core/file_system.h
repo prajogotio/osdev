@@ -4,16 +4,16 @@
 #include "stdint.h"
 #include "disk_allocation.h"
 
-#define EMPTY_TYPE       0
-#define DIRECTORY_TYPE   1
-#define FILE_TYPE        2
+#define EMPTY_TYPE              0
+#define DIRECTORY_TYPE          1
+#define FILE_TYPE               2
+#define SELF_DIRECTORY_TYPE     3
+#define PARENT_DIRECTORY_TYPE   4
 
 
 struct __attribute__ ((packed)) FileDescriptor {
   char name[32];
   logical_block_addr start_addr;
-  logical_block_addr parent_addr;
-  int parent_id;
   int id;
   int type;
   int filesize;

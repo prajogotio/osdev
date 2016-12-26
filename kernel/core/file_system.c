@@ -23,8 +23,6 @@ void FileSystemInitialize() {
   cwd_->name[0] = '/';
   cwd_->name[1] = 0;
   cwd_->start_addr = 2000 * 4096/512; // Root directory is placed at block 2000
-  cwd_->parent_addr = 0;
-  cwd_->parent_id = 0;
   cwd_->id = 0;
   cwd_->type = DIRECTORY_TYPE;
   cwd_->filesize = 0;
@@ -49,12 +47,22 @@ bool CreateDir(char *dirname) {
       fd->type = DIRECTORY_TYPE;
       // Allocate a block to this directory and store the LBA here.
       fd->start_addr = DiskAllocateBlock();
-      DiskMemsetBlock(fd->start_addr, 0);
-      fd->parent_addr = cwd_->start_addr;
-      fd->parent_id = cwd_->id;
       cwd_->filesize += sizeof(struct FileDescriptor);
       // Write to disk
       AtaPioWriteToDisk(ATA_PIO_MASTER, cwd_->start_addr, FILE_READ_SIZE, buffer_page_);
+
+      // Write recursive pointer to itself (i.e. '.') as the first entry
+      struct FileDescriptor* self_dir = (struct FileDescriptor*) buffer_page_;
+      memcpy((char*)fd, (char*)self_dir, sizeof(struct FileDescriptor));
+      self_dir->type = SELF_DIRECTORY_TYPE;
+
+      struct FileDescriptor* parent_dir = (struct FileDescriptor*) (buffer_page_ + sizeof(struct FileDescriptor));
+      memcpy((char*) cwd_, (char*) parent_dir, sizeof(struct FileDescriptor));
+      parent_dir->type = PARENT_DIRECTORY_TYPE;
+
+      memset((char*) (buffer_page_ + 2 * sizeof(struct FileDescriptor)), 0, 4096 - 2 * sizeof(struct FileDescriptor));
+      // Add parent directory
+      AtaPioWriteToDisk(ATA_PIO_MASTER, self_dir->start_addr, 8, buffer_page_);
       return 1;
     }
   }
@@ -76,18 +84,25 @@ void ListDirectoryContent() {
     } else if (fd->type == DIRECTORY_TYPE) {
       PrintString("dir ");
     }
-    PrintString(fd->name);
-    PrintString(" size:");
-    PrintInt(fd->filesize);
-    PrintString(" start_addr:");
-    PrintHex(fd->start_addr);
-    PrintString(" id: ");
-    PrintInt(fd->id);
-    PrintString(" par_addr:");
-    PrintHex(fd->parent_addr);
-    PrintString(" par_id:");
-    PrintInt(fd->parent_id);
-    PrintString("\n");
+
+    if (fd->type == SELF_DIRECTORY_TYPE) {
+      PrintString(".   Current directory: ");
+      PrintString(fd->name);
+      PrintString("\n");
+    } else if (fd->type == PARENT_DIRECTORY_TYPE) {
+      PrintString("..  Parent directory: ");
+      PrintString(fd->name);
+      PrintString("\n");
+    } else {
+      PrintString(fd->name);
+      PrintString(" size:");
+      PrintInt(fd->filesize);
+      PrintString(" start_addr:");
+      PrintHex(fd->start_addr);
+      PrintString(" id: ");
+      PrintInt(fd->id);
+      PrintString("\n");
+    }
   }
   PrintString("\n");
   // TODO: handle next block of directory entry
@@ -96,12 +111,18 @@ void ListDirectoryContent() {
 bool ChangeDir(char * dirname) {
   FileDescriptorIterator_Initialize(iterator_, buffer_page_, cwd_->start_addr);
   struct FileDescriptor* fd;
+
   while (FileDescriptorIterator_GetNext(iterator_, &fd)) {
     if (fd->type == EMPTY_TYPE) {
       break;
     }
-    if (fd->type == DIRECTORY_TYPE && strcmp(fd->name, dirname) == 0) {
+
+    // 3 Cases
+    if ((fd->type == DIRECTORY_TYPE && strcmp(fd->name, dirname) == 0) ||
+        (fd->type == SELF_DIRECTORY_TYPE && strcmp(dirname, ".") == 0) ||
+        (fd->type == PARENT_DIRECTORY_TYPE && strcmp(dirname, "..") == 0)) {
       memcpy((char*) fd, (char*) cwd_, sizeof(struct FileDescriptor));
+      cwd_->type = DIRECTORY_TYPE;
       return 1;
     }
   }

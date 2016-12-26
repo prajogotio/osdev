@@ -1,5 +1,6 @@
 #include "file_descriptor_iterator.h"
 #include "core/ata_pio.h"
+#include "core/string.h"
 
 void FileDescriptorIterator_Initialize(struct FileDescriptorIterator* iterator, char* buffer, logical_block_addr addr) {
   memset(iterator, 0, sizeof(struct FileDescriptorIterator));
