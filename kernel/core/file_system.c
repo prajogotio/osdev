@@ -5,13 +5,17 @@
 #include "virtual.h"
 #include "ata_pio.h"
 #include "kmalloc.h"
+#include "lib/file_descriptor_iterator.h"
 
 #define FILE_READ_SIZE     0x1000/512   // We want to read exactly 1 block, which is 0x1000/512 sectors.
 
+
 static struct FileDescriptor* cwd_;
 static char* buffer_page_;  // pointer to buffer page of size 4096.
+static struct FileDescriptorIterator* iterator_;
 
 static void CopyFileDescriptor(struct FileDescriptor* source, struct FileDescriptor* dest);
+
 
 void FileSystemInitialize() {
   cwd_ = (struct FileDescriptor*) kmalloc(sizeof(struct FileDescriptor));
@@ -27,14 +31,16 @@ void FileSystemInitialize() {
   // Allocate VAS to buffer_page_
   buffer_page_ = (char*) kmalloc(4096);
   memset(buffer_page_, 0, 4096);
+  // Allocate a reusable iterator
+  struct FileDescriptorIterator* iterator_ = (struct FileDescriptorIterator*) kmalloc(sizeof(struct FileDescriptorIterator));
   DiskInitialize();
 }
 
 bool CreateDir(char *dirname) {
-  AtaPioReadFromDisk(ATA_PIO_MASTER, cwd_->start_addr, FILE_READ_SIZE, buffer_page_);
-  int sz_of_entry = sizeof(struct FileDescriptor);
-  for (int i = 0; i < 4096 - 4; i += sz_of_entry) {
-    struct FileDescriptor* fd = (struct FileDescriptor*) &buffer_page_[i];
+  FileDescriptorIterator_Initialize(iterator_, buffer_page_, cwd_->start_addr);
+  struct FileDescriptor* fd;
+
+  while (FileDescriptorIterator_GetNext(iterator_, &fd)) {
     if (fd->type == EMPTY_TYPE) {
       // Found an empty space for our new directory descriptor
       // Update information
@@ -59,11 +65,9 @@ bool CreateDir(char *dirname) {
 }
 
 void ListDirectoryContent() {
-  // Print to screen
-  AtaPioReadFromDisk(ATA_PIO_MASTER, cwd_->start_addr, FILE_READ_SIZE, buffer_page_);
-  int sz_of_entry = sizeof(struct FileDescriptor);
-  for (int i = 0; i < 4096 - 4; i += sz_of_entry) {
-    struct FileDescriptor* fd = (struct FileDescriptor*) &buffer_page_[i];
+  FileDescriptorIterator_Initialize(iterator_, buffer_page_, cwd_->start_addr);
+  struct FileDescriptor* fd;
+  while (FileDescriptorIterator_GetNext(iterator_, &fd)) {
     if (fd->type == EMPTY_TYPE) {
       return;
     }
@@ -90,10 +94,9 @@ void ListDirectoryContent() {
 }
 
 bool ChangeDir(char * dirname) {
-  AtaPioReadFromDisk(ATA_PIO_MASTER, cwd_->start_addr, FILE_READ_SIZE, buffer_page_);
-  int sz_of_entry = sizeof(struct FileDescriptor);
-  for (int i = 0; i < 4096 - 4; i += sz_of_entry) {
-    struct FileDescriptor* fd = (struct FileDescriptor*) &buffer_page_[i];
+  FileDescriptorIterator_Initialize(iterator_, buffer_page_, cwd_->start_addr);
+  struct FileDescriptor* fd;
+  while (FileDescriptorIterator_GetNext(iterator_, &fd)) {
     if (fd->type == EMPTY_TYPE) {
       break;
     }
@@ -106,13 +109,9 @@ bool ChangeDir(char * dirname) {
 }
 
 bool OpenFile(struct File* file, char* filename) {
-  // Get the first page containing the directory info memory
-  AtaPioReadFromDisk(ATA_PIO_MASTER, cwd_->start_addr,
-                     FILE_READ_SIZE, buffer_page_);
-  int sz_of_entry = sizeof(struct FileDescriptor); // number of bytes per entry in the directory page
-  // 4096 - 4 because the last 4 bytes are reserved for LBA to the next entries in the same directory (if any).
-  for (int i = 0; i < 4096 - 4; i += sz_of_entry) {
-    struct FileDescriptor* fd = (struct FileDescriptor*) &buffer_page_[i];
+  FileDescriptorIterator_Initialize(iterator_, buffer_page_, cwd_->start_addr);
+  struct FileDescriptor* fd;
+  while (FileDescriptorIterator_GetNext(iterator_, &fd)) {
     if (strcmp(fd->name, filename) == 0) {
       CopyFileDescriptor(fd, file->file_descriptor);
       file->cursor = 0;

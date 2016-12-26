@@ -2,7 +2,7 @@ KFLAGS=-ffreestanding -std=c99
 KINCLUDE=-Ikernel
 
 _CORE_MODULE = print hal gdt idt pit pic keyboard debug physical string page_table_entry page_directory_entry virtual stdin_buffer ata_pio file_system kmalloc disk_allocation math
-_LIB_MODULE = string_tokenizer
+_LIB_MODULE = string_tokenizer file_descriptor_iterator
 
 # Note: $(patsubst pattern,replacement,string)
 CORE_OBJS = $(patsubst %,kernel/core/%.o,$(_CORE_MODULE))
