@@ -4,6 +4,7 @@
 #include "print.h"
 #include "virtual.h"
 #include "ata_pio.h"
+#include "kmalloc.h"
 
 #define FILE_READ_SIZE     0x1000/512   // We want to read exactly 1 block, which is 0x1000/512 sectors.
 
@@ -14,11 +15,9 @@ static void CopyFileDescriptor(struct FileDescriptor* source, struct FileDescrip
 
 void FileSystemInitialize(struct FileDescriptor* dir_desc) {
   cwd_ = dir_desc;
-  physical_addr buffer_addr = (physical_addr) MmapAllocateBlocks(1);
-  // Locate buffer_page_ at 0xd0000000
-  buffer_page_ = (char*) 0xd0000000;
-  // [0xd0000000 - 0xd0001000) mapped to the buffer page.
-  VmmMapPage((void*) buffer_addr, (void*) buffer_page_);
+  // Allocate VAS to buffer_page_
+  buffer_page_ = (char*) kmalloc(4096);
+  memset(buffer_page_, 0, 4096);
 }
 
 bool CreateDir(char *dirname) {
