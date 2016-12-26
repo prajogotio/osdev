@@ -12,6 +12,9 @@
 struct __attribute__ ((packed)) FileDescriptor {
   char name[32];
   logical_block_addr start_addr;
+  logical_block_addr parent_addr;
+  int parent_id;
+  int id;
   int type;
   int filesize;
 };
@@ -22,7 +25,7 @@ struct __attribute__ ((packed)) File {
 };
 
 // Directory creation, deletion and traversal
-extern void FileSystemInitialize(struct FileDescriptor* dir_desc);
+extern void FileSystemInitialize();
 extern bool CreateDir(char* dirname);
 extern void ListDirectoryContent();
 extern bool ChangeDir(char* dirname);

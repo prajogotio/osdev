@@ -9,6 +9,8 @@ extern void DiskInitialize();
 extern void DiskFormat();
 extern logical_block_addr DiskAllocateBlock();
 extern void DiskFreeBlock(logical_block_addr addr);
+extern int DiskAllocateFileId();
+extern void DiskMemsetBlock(logical_block_addr addr, char val);
 
 
 #endif  //__TIO_OS_DISK_ALLOCATION_H__

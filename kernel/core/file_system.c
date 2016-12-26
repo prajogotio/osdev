@@ -13,8 +13,17 @@ static char* buffer_page_;  // pointer to buffer page of size 4096.
 
 static void CopyFileDescriptor(struct FileDescriptor* source, struct FileDescriptor* dest);
 
-void FileSystemInitialize(struct FileDescriptor* dir_desc) {
-  cwd_ = dir_desc;
+void FileSystemInitialize() {
+  cwd_ = (struct FileDescriptor*) kmalloc(sizeof(struct FileDescriptor));
+  memset(cwd_, 0, sizeof(struct FileDescriptor));
+  cwd_->name[0] = '/';
+  cwd_->name[1] = 0;
+  cwd_->start_addr = 2000 * 4096/512; // Root directory is placed at block 2000
+  cwd_->parent_addr = 0;
+  cwd_->parent_id = 0;
+  cwd_->id = 0;
+  cwd_->type = DIRECTORY_TYPE;
+  cwd_->filesize = 0;
   // Allocate VAS to buffer_page_
   buffer_page_ = (char*) kmalloc(4096);
   memset(buffer_page_, 0, 4096);
@@ -29,14 +38,21 @@ bool CreateDir(char *dirname) {
     if (fd->type == EMPTY_TYPE) {
       // Found an empty space for our new directory descriptor
       // Update information
+      fd->id = DiskAllocateFileId();
       strcpy(dirname, fd->name);
       fd->type = DIRECTORY_TYPE;
+      // Allocate a block to this directory and store the LBA here.
+      fd->start_addr = DiskAllocateBlock();
+      DiskMemsetBlock(fd->start_addr, 0);
+      fd->parent_addr = cwd_->start_addr;
+      fd->parent_id = cwd_->id;
+      cwd_->filesize += sizeof(struct FileDescriptor);
       // Write to disk
       AtaPioWriteToDisk(ATA_PIO_MASTER, cwd_->start_addr, FILE_READ_SIZE, buffer_page_);
       return 1;
     }
   }
-  // TODO: allocate new block for this directory if space is not enought
+  // TODO: allocate new block for this directory if space is not enough
   // TODO: check dirname does not contain special chars
   // TODO: check for uniqueness of dirname
   return 0;
@@ -57,10 +73,16 @@ void ListDirectoryContent() {
       PrintString("dir ");
     }
     PrintString(fd->name);
-    PrintString(" ");
+    PrintString(" size:");
     PrintInt(fd->filesize);
-    PrintString(" ");
+    PrintString(" start_addr:");
     PrintHex(fd->start_addr);
+    PrintString(" id: ");
+    PrintInt(fd->id);
+    PrintString(" par_addr:");
+    PrintHex(fd->parent_addr);
+    PrintString(" par_id:");
+    PrintInt(fd->parent_id);
     PrintString("\n");
   }
   PrintString("\n");

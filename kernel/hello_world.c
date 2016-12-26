@@ -6,7 +6,7 @@
 
 #define BUFFER_SIZE 4096
 
-static char* CLI_PREFIX = "tio-os$ ";
+static char* CLI_PREFIX = "\ntio-os$ ";
 
 static char command_buffer_[BUFFER_SIZE];
 static int command_size_ = 0;
@@ -37,6 +37,10 @@ void kernel_main() {
               "Welcome to Tio OS! The best OS ever!\n"
               "Timer and keyboard kinda works!\n");
   PrintString(CLI_PREFIX);
+
+
+  // For now, always reformat the disk first
+  DiskFormat();
 
   for (;;) {
     DebugMoveCursor(0, 0);

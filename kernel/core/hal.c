@@ -11,8 +11,6 @@
 
 uint32_t * Hal_memory_information = 0;
 
-static struct FileDescriptor* root_directory_;
-
 static void InitializeMemoryManagement();
 static void MmapAllocationTesting();
 static void WriteToMemory(void* position, char * str);
@@ -30,7 +28,7 @@ int HalInitialize() {
   InitializeKeyboard();
   InitializeDiskManager();
   KmallocInitialize();
-  InitializeFileSystem();
+  FileSystemInitialize();
   PrintString("HAL Initialized!\n");
   return 0;
 }
@@ -215,15 +213,4 @@ static void WriteToMemory(void* position, char * str) {
     *(index++) = *(str++);
   }
   *index = 0;
-}
-
-
-static void InitializeFileSystem() {
-  root_directory_ = (struct FileDescriptor*) kmalloc(sizeof(struct FileDescriptor));
-  memset(root_directory_, 0, sizeof(struct FileDescriptor));
-  root_directory_->name[0] = '/';
-  root_directory_->name[1] = 0;
-  root_directory_->start_addr = 500 * 1024 / 512; // File system start at 500KB mark in disk
-  root_directory_->type = DIRECTORY_TYPE;
-  FileSystemInitialize(root_directory_);
 }

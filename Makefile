@@ -14,6 +14,7 @@ LIB_OBJS = $(patsubst %,kernel/lib/%.o,$(_LIB_MODULE))
 all: boot hello_world
 	cat bootloader.bin enter_protected_mode.bin kernel/hello_world.bin > tio_os.img
 
+.PHONY: boot
 boot: boot/enter_protected_mode.asm boot/bootloader.asm
 	nasm -f bin boot/bootloader.asm -o bootloader.bin
 	nasm -f bin boot/enter_protected_mode.asm -o enter_protected_mode.bin
