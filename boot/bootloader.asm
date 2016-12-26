@@ -3,9 +3,9 @@ bits 16
 
 jmp loader
 
-%include "inc/stdio.inc"
-%include "inc/load_from_disk.inc"
-%include "bootloader_test/print_hex.asm"
+%include "boot/inc/stdio.inc"
+%include "boot/inc/load_from_disk.inc"
+%include "boot/debugger/print_hex.asm"
 
 KERNEL_SECTORS            dd 52
 KERNEL_STARTING_SECTOR    dd 5

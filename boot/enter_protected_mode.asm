@@ -6,9 +6,9 @@ jmp main
 
 %define KERNEL_PROTECTED_BASE 0xc0000000
 
-%include "inc/stdio.inc"
-%include "inc/install_gdt.inc"
-%include "bootloader_test/print_hex_32.asm"
+%include "boot/inc/stdio.inc"
+%include "boot/inc/install_gdt.inc"
+%include "boot/debugger/print_hex_32.asm"
 
 LoadingMsg db "Preparing to load operating system...", 0x0A, 0x0D, 0x00
 DiskLoadedMsg db "Disk Loaded!", 0x0A, 0x0D, 0
@@ -143,9 +143,9 @@ Stop:
   cli
   hlt
 
-%include "inc/Puts32.inc"
-%include "inc/memory_map.inc"
-%include "inc/paging.inc"
+%include "boot/inc/Puts32.inc"
+%include "boot/inc/memory_map.inc"
+%include "boot/inc/paging.inc"
 
 kernel_copy_base
   dd 0

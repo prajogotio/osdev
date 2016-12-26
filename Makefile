@@ -7,10 +7,12 @@ _CORE_MODULE = print hal gdt idt pit pic keyboard debug physical string page_tab
 CORE_OBJS = $(patsubst %,kernel/core/%.o,$(_CORE_MODULE))
 CORE_HEADERS = $(patsubst %,kernel/core/%.h,%(_CORE_MODULE))
 
-all: enter_protected_mode.asm bootloader.asm hello_world
-	nasm -f bin bootloader.asm -o bootloader.bin
-	nasm -f bin enter_protected_mode.asm -o enter_protected_mode.bin
+all: boot hello_world
 	cat bootloader.bin enter_protected_mode.bin kernel/hello_world.bin > tio_os.img
+
+boot: boot/enter_protected_mode.asm boot/bootloader.asm
+	nasm -f bin boot/bootloader.asm -o bootloader.bin
+	nasm -f bin boot/enter_protected_mode.asm -o enter_protected_mode.bin
 
 hello_world: kernel/hello_world.c kernel/hello_world.ld $(CORE_OBJS)
 	i686-elf-gcc -ffreestanding -std=c99 -c kernel/hello_world.c -o kernel/hello_world.o
