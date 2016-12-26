@@ -18,7 +18,7 @@ void FileSystemInitialize(struct FileDescriptor* dir_desc) {
   // Locate buffer_page_ at 0xd0000000
   buffer_page_ = (char*) 0xd0000000;
   // [0xd0000000 - 0xd0001000) mapped to the buffer page.
-  VmmMapPage((physical_addr) buffer_addr, (virtual_addr) buffer_page_);
+  VmmMapPage((void*) buffer_addr, (void*) buffer_page_);
 }
 
 bool CreateDir(char *dirname) {

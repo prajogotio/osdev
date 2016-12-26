@@ -171,7 +171,7 @@ static void PagefaultHandler() {
   // The case where virtual address is brought back from disk is not yet
   // implemented.
   physical_addr new_page = (physical_addr) MmapAllocateBlocks(1);
-  VmmMapPage(new_page, (virtual_addr) (pagefault_address_ & ~0xfff));
+  VmmMapPage((void*) new_page, (void*) (pagefault_address_ & ~0xfff));
 
   PrintString("Physical Addr: ");
   PrintHex(new_page);
@@ -251,7 +251,7 @@ static void VmmTest() {
   VmmFlushTlbEntry((virtual_addr) virtual_memory);
   PrintHex(*(virtual_memory+123));
   PrintString("\nnew physical_addr: ");
-  PrintHex(VmmGetPhysicalAddress(virtual_memory));
+  PrintHex((int)VmmGetPhysicalAddress(virtual_memory));
   for(;;);
 }
 

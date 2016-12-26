@@ -6,6 +6,7 @@
 #include "print.h"
 #include "keyboard.h"
 #include "virtual.h"
+#include "kmalloc.h"
 
 uint32_t * Hal_memory_information = 0;
 
@@ -27,6 +28,7 @@ int HalInitialize() {
   InitializeMemoryManagement();
   InitializeKeyboard();
   InitializeDiskManager();
+  KmallocInitialize();
   InitializeFileSystem();
   PrintString("HAL Initialized!\n");
   return 0;
