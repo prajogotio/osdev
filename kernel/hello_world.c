@@ -1,6 +1,6 @@
-#include "print.h"
-#include "debug.h"
-#include "hal.h"
+#include "core/print.h"
+#include "core/debug.h"
+#include "core/hal.h"
 
 #define BUFFER_SIZE 4096
 
