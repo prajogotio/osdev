@@ -1,11 +1,14 @@
-CC=i686-elf-gcc
-CFLAGS=-ffreestanding -std=c99
+KFLAGS=-ffreestanding -std=c99
+KINCLUDE=-Ikernel
 
 _CORE_MODULE = print hal gdt idt pit pic keyboard debug physical string page_table_entry page_directory_entry virtual stdin_buffer ata_pio file_system kmalloc
 
 # Note: $(patsubst pattern,replacement,string)
 CORE_OBJS = $(patsubst %,kernel/core/%.o,$(_CORE_MODULE))
 CORE_HEADERS = $(patsubst %,kernel/core/%.h,%(_CORE_MODULE))
+
+# Empty implicit suffix rule
+.SUFFIXES:
 
 all: boot hello_world
 	cat bootloader.bin enter_protected_mode.bin kernel/hello_world.bin > tio_os.img
@@ -21,8 +24,9 @@ hello_world: kernel/hello_world.c kernel/hello_world.ld $(CORE_OBJS)
 # Compile the core objects
 # Note $@ := left hand side of ':'
 #      $< := first item in the dependency list
-kernel/%.o: %.c %.h
-	$(CC) $(CFLAGS) -c -o $@ $<
+
+kernel/core/%.o: kernel/core/%.c kernel/core/%.h
+	i686-elf-gcc $(KFLAGS) $(KINCLUDE) -c $< -o $@
 
 clean:
 	rm $(CORE_OBJS) kernel/*.o kernel/*.bin *.bin *.img

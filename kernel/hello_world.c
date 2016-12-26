@@ -23,37 +23,11 @@ void kernel_main() {
 
   ClearScreen();
 
-  char* welcome_message = 
-               "SCROLLING TEST: THIS ROW SHOULD NOT BE PRINTED\n"
-               "0123456789---------2---------3---------4---------5---------6---------7---------8"
-               "1        Hello There, Welcome to Tio OS!\n"
-               "2       By Prajogo Tio, 2016\n"
-               "3\n"
-               "4        This OS is OSomeee\n"
-               "5TESTMORETHAN801XXXXXXXXX2XXXXXXXXX3XXXXXXXXX4XXXXXXXXX5XXXXXXXXX6XXXXXXXXX7XXXXXXXXX8XXXXXXXXXTHISSHOULDBEONANEWLINE\n"
-               "7\n"
-               "8\n"
-               "9\n"
-               "10\n"
-               "11\n"
-               "12\n"
-               "13\n"
-               "14\n"
-               "15\n"
-               "16\n"
-               "17\n"
-               "18\n"
-               "19\n"
-               "20\n"
-               "21\n"
-               "22\n"
-               "23\n"
-               ;
-  PrintString(welcome_message);
-  PrintString("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nScrolling seems to work. Let's initialize HAL...\n");
+  PrintString("Initializing HAL...\n");
 
   HalInitialize();
   ClearScreen();
+  
   __asm__("sti");
 
   PrintString("\n"

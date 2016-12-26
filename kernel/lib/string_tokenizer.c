@@ -1,4 +1,5 @@
 #include "string_tokenizer.h"
+#include "core/kmalloc.h"
 
 void StringTokenizer_Initialize(struct StringTokenizer* tokenizer, char* str, char delim) {
   tokenizer->str = str;
