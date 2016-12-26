@@ -18,6 +18,7 @@ void FileSystemInitialize(struct FileDescriptor* dir_desc) {
   // Allocate VAS to buffer_page_
   buffer_page_ = (char*) kmalloc(4096);
   memset(buffer_page_, 0, 4096);
+  DiskInitialize();
 }
 
 bool CreateDir(char *dirname) {

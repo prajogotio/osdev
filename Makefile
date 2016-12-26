@@ -1,7 +1,7 @@
 KFLAGS=-ffreestanding -std=c99
 KINCLUDE=-Ikernel
 
-_CORE_MODULE = print hal gdt idt pit pic keyboard debug physical string page_table_entry page_directory_entry virtual stdin_buffer ata_pio file_system kmalloc
+_CORE_MODULE = print hal gdt idt pit pic keyboard debug physical string page_table_entry page_directory_entry virtual stdin_buffer ata_pio file_system kmalloc disk_allocation math
 _LIB_MODULE = string_tokenizer
 
 # Note: $(patsubst pattern,replacement,string)
@@ -36,5 +36,5 @@ clean:
 	rm $(CORE_OBJS) $(LIB_OBJS) kernel/*.o kernel/*.bin *.bin *.img
 
 run:
-	qemu-img resize tio_os.img +10M
+	qemu-img resize tio_os.img +32M
 	qemu-system-x86_64 -d guest_errors -hda tio_os.img -m 256

@@ -123,6 +123,14 @@ static bool DetectMultiwordCommand() {
       } else {
         PrintString("Error: cd: specify a valid directory name\n");
       }
+    } else if (strcmp(token, "diskutil") == 0) {
+      if (StringTokenizer_GetNext(tokenizer, token) && strcmp(token, "fmt") == 0) {
+        PrintString("Formatting disk... ");
+        DiskFormat();
+        PrintString("Done.\n");
+      } else {
+        PrintString("Error: diskutil: invalid option");
+      }
     } else {
       command_found = 0;
     }

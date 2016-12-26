@@ -2,12 +2,12 @@
 #define __TIO_OS_FILE_SYSTEM_H__
 
 #include "stdint.h"
+#include "disk_allocation.h"
 
 #define EMPTY_TYPE       0
 #define DIRECTORY_TYPE   1
 #define FILE_TYPE        2
 
-typedef uint32_t logical_block_addr;    // Only the first 28 bits are used.
 
 struct __attribute__ ((packed)) FileDescriptor {
   char name[32];
