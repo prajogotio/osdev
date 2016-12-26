@@ -66,6 +66,22 @@ void ListDirectoryContent() {
   // TODO: handle next block of directory entry
 }
 
+bool ChangeDir(char * dirname) {
+  AtaPioReadFromDisk(ATA_PIO_MASTER, cwd_->start_addr, FILE_READ_SIZE, buffer_page_);
+  int sz_of_entry = sizeof(struct FileDescriptor);
+  for (int i = 0; i < 4096 - 4; i += sz_of_entry) {
+    struct FileDescriptor* fd = (struct FileDescriptor*) &buffer_page_[i];
+    if (fd->type == EMPTY_TYPE) {
+      break;
+    }
+    if (fd->type == DIRECTORY_TYPE && strcmp(fd->name, dirname) == 0) {
+      memcpy(fd, cwd_, sizeof(struct FileDescriptor));
+      return 1;
+    }
+  }
+  return 0;
+}
+
 bool OpenFile(struct File* file, char* filename) {
   // Get the first page containing the directory info memory
   AtaPioReadFromDisk(ATA_PIO_MASTER, cwd_->start_addr,

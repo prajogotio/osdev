@@ -104,9 +104,9 @@ static bool DetectMultiwordCommand() {
   bool command_found = 1;
   StringTokenizer_Initialize(tokenizer, command_buffer_, ' ');
   { // First phase: check if command is recognized
+    // Second phase: use additional input arguments to fulfill the command 
     StringTokenizer_GetNext(tokenizer, token);
     if (strcmp(token, "mkdir") == 0) {
-      command_found = 1;
       if (StringTokenizer_GetNext(tokenizer, token) && strlen(token) != 0) {
         CreateDir(token);
         PrintString("Directory created: ");
@@ -115,6 +115,16 @@ static bool DetectMultiwordCommand() {
       } else {
         PrintString("Error: mkdir: no directory name supplied\n");
       }
+    } else if (strcmp(token, "cd") == 0) {
+      if (StringTokenizer_GetNext(tokenizer, token) && strlen(token) != 0 && ChangeDir(token)) {
+        PrintString("Moved to directory: ");
+        PrintString(token);
+        PrintString("\n");
+      } else {
+        PrintString("Error: cd: specify a valid directory name\n");
+      }
+    } else {
+      command_found = 0;
     }
   }
   // Deallocate all memory

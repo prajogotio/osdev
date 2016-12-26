@@ -25,6 +25,7 @@ struct __attribute__ ((packed)) File {
 extern void FileSystemInitialize(struct FileDescriptor* dir_desc);
 extern bool CreateDir(char* dirname);
 extern void ListDirectoryContent();
+extern void ChangeDirectory(char* dirname);
 
 // Given a filename, set the file descriptor to contain relevant information of
 // the corresponding file. Returns true if the file is found.
