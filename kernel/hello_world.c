@@ -10,9 +10,11 @@ static char* CLI_PREFIX = "\ntio-os$ ";
 
 static char command_buffer_[BUFFER_SIZE];
 static int command_size_ = 0;
-static void HandleCommand();
-static void UpdateCommandBuffer(char c);
-static bool DetectMultiwordCommand();
+
+static void CliHandleCommand();
+static void CliUpdateCommandBuffer(char c);
+static bool CliDetectMultiwordCommand();
+static void CliHandleWriteFile(struct StringTokenizer* tokenizer);
 
 void kernel_main() {
   __asm__("movw $0x10, %ax\n\t"
@@ -52,7 +54,7 @@ void kernel_main() {
       char curkey = StdinBufferReadByte();
       if (curkey == '\n') {
         PrintChar(curkey);
-        HandleCommand();
+        CliHandleCommand();
       } else if (curkey == 8) {
         // Backspace only if buffer is not empty
         if (command_size_ > 0) {
@@ -62,7 +64,7 @@ void kernel_main() {
         }
       } else {
         PrintChar(curkey);
-        UpdateCommandBuffer(curkey);
+        CliUpdateCommandBuffer(curkey);
       }
     }
   }
@@ -71,12 +73,12 @@ void kernel_main() {
           "hlt \n\t");
 }
 
-static void UpdateCommandBuffer(char curkey) {
+static void CliUpdateCommandBuffer(char curkey) {
   command_buffer_[command_size_++] = curkey;
   command_buffer_[command_size_] = 0;
 }
 
-static void HandleCommand() {
+static void CliHandleCommand() {
   bool command_found = 1;
   // One word command
   if (strcmp("hello", command_buffer_) == 0) {
@@ -86,7 +88,7 @@ static void HandleCommand() {
   } else if (strcmp("ls", command_buffer_) == 0) {
     ListDirectoryContent();
   } else {
-    command_found = DetectMultiwordCommand();
+    command_found = CliDetectMultiwordCommand();
   }
 
   if (!command_found) {
@@ -99,7 +101,7 @@ static void HandleCommand() {
   PrintString(CLI_PREFIX);
 }
 
-static bool DetectMultiwordCommand() {
+static bool CliDetectMultiwordCommand() {
   struct StringTokenizer* tokenizer = (struct StringTokenizer*) kmalloc(sizeof(struct StringTokenizer));
   memset(tokenizer, 0, sizeof(struct StringTokenizer));
   char* token = (char*) kmalloc(sizeof(4096));
@@ -135,6 +137,14 @@ static bool DetectMultiwordCommand() {
       } else {
         PrintString("Error: diskutil: invalid option");
       }
+    } else if (strcmp(token, "touch") == 0) {
+      if (StringTokenizer_GetNext(tokenizer, token)) {
+        CreateFile(token);
+      } else {
+        PrintString("Error: touch: no filename given");
+      }
+    } else if (strcmp(token, "write") == 0) {
+      CliHandleWriteFile(tokenizer);
     } else {
       command_found = 0;
     }
@@ -143,4 +153,45 @@ static bool DetectMultiwordCommand() {
   kfree(tokenizer);
   kfree(token);
   return command_found;
+}
+
+static void CliHandleWriteFile(struct StringTokenizer* tokenizer) {
+  char* filename = (char*) kmalloc(4096);
+  if (!StringTokenizer_GetNext(tokenizer, filename)) {
+    PrintString("Error: write: file name not supplied.\n");
+    goto CleanupInitialCheck;
+  }
+
+  struct File* file;
+  if (!OpenFile(&file, filename)) {
+    PrintString("Error: write: file not found: ");
+    PrintString(filename);
+    PrintString("\n");
+    goto CleanupOpenFilePhase;
+  }
+
+  char c = tokenizer->delim;
+  StringTokenizer_SetDelimiter(tokenizer, 0);
+  char* data = (char*) kmalloc(4096);
+  if (!StringTokenizer_GetNext(tokenizer, data)) {
+    PrintString("Error: write: no input supplied.\n");
+    goto CleanupWritePhase;
+  }
+  int written = WriteFile(file, data, strlen(data));
+  PrintInt(written);
+  PrintString(" bytes is written to ");
+  PrintString(filename);
+  PrintString("\n");
+
+CleanupWritePhase:
+  StringTokenizer_SetDelimiter(tokenizer, c);
+  kfree(data);
+
+CleanupOpenFilePhase:
+  CloseFile(&file);
+
+CleanupInitialCheck:
+  kfree(filename);
+
+  return;
 }

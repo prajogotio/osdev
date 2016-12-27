@@ -21,7 +21,6 @@ static const int size_of_node_ = sizeof(struct KmallocNode);
 static struct KmallocNode* KmallocGetNextUsableAddress();
 static void KmallocAddToFreePointer(struct KmallocNode* ptr);
 static void KmallocTest();
-static void KmallocDisplayLists();
 
 void KmallocInitialize() {
   // 0xf0000000 points to head of allocated_list
@@ -98,7 +97,12 @@ void* kmalloc(size_t size) {
     ptr = ptr->next;
   }
   if (ptr == free_list_head_) {
+
     // We cannot find suitable allocation.
+    // TODO: handle this situation.
+    PrintString("VAS allocation error: Out of VAS to allocate.");
+    for(;;);
+
     return 0;
   }
   void* ret_addr = (void*) ptr->start;
@@ -149,6 +153,7 @@ void kfree(void* address) {
   prev_ptr->next = next_ptr;
   next_ptr->prev = prev_ptr;
 
+  // Find the position where we should place our newly freed memory
   struct KmallocNode* fl_ptr = free_list_head_->next;
   while (fl_ptr != free_list_head_ && fl_ptr->start < ptr->start) {
     fl_ptr = fl_ptr->next;
@@ -173,7 +178,6 @@ void kfree(void* address) {
     ptr->size += fl_ptr->size;
     ptr->prev = fl_ptr->prev;
     ptr->prev->next = ptr;
-
     KmallocAddToFreePointer(fl_ptr);
   }
 
@@ -186,7 +190,7 @@ void kfree(void* address) {
   }
 }
 
-static void KmallocDisplayLists() {
+void KmallocDisplayLists() {
   {
     struct KmallocNode* testptr = free_list_head_->next;
     while (testptr != free_list_head_) {

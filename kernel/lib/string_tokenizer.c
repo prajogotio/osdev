@@ -28,3 +28,7 @@ bool StringTokenizer_GetNext(struct StringTokenizer* tokenizer, char* token) {
   }
   return 1;
 }
+
+bool StringTokenizer_SetDelimiter(struct StringTokenizer* tokenizer, char new_delim) {
+  tokenizer->delim = new_delim;
+}

@@ -10,13 +10,21 @@
 #define SELF_DIRECTORY_TYPE     3
 #define PARENT_DIRECTORY_TYPE   4
 
+#define FILE_CONTENT_SIZE  4088         // The remaining 8 bytes are used for
+                                        // pointers to next and prev block
 
 struct __attribute__ ((packed)) FileDescriptor {
   char name[32];
-  logical_block_addr start_addr;
+  logical_block_addr start_addr;    // start address of the file
   int id;
   int type;
   int filesize;
+
+  // We need a way to reference this file descriptor itself on disk.
+  // As long as we can get to the start of the directory that contains this
+  // descriptor, we search the directory by id.
+  logical_block_addr parent_start_addr;  // Start address of the directory that
+                                         // contains this descriptor.
 };
 
 struct __attribute__ ((packed)) File {
@@ -30,8 +38,11 @@ extern bool CreateDir(char* dirname);
 extern void ListDirectoryContent();
 extern bool ChangeDir(char* dirname);
 
-// Given a filename, set the file descriptor to contain relevant information of
-// the corresponding file. Returns true if the file is found.
-extern bool OpenFile(struct File* file, char* filename);
+// File operation
+extern bool CreateFile(char *filename);
+extern bool OpenFile(struct File** file, char* filename);
+extern void CloseFile(struct File** file);
+extern int WriteFile(struct File* file, char* buffer, size_t size);
 extern int ReadFile(struct File* fp, char* buffer, size_t read_size);
+
 #endif  //__TIO_OS_FILE_SYSTEM_H__

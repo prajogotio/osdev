@@ -15,4 +15,6 @@ extern void StringTokenizer_Initialize(struct StringTokenizer* tokenizer, char* 
 // Set token to the next token returned by tokenizer. Returns 1 if a token is returned, 0 no more token is available.
 extern bool StringTokenizer_GetNext(struct StringTokenizer* tokenizer, char* token);
 
+extern bool StringTokenizer_SetDelimiter(struct StringTokenizer* tokenizer, char new_delim);
+
 #endif  //__TIO_OS_STRING_TOKENIZER_H__

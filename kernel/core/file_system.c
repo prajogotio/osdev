@@ -5,6 +5,7 @@
 #include "virtual.h"
 #include "ata_pio.h"
 #include "kmalloc.h"
+#include "math.h"
 #include "lib/file_descriptor_iterator.h"
 
 #define FILE_READ_SIZE     0x1000/512   // We want to read exactly 1 block, which is 0x1000/512 sectors.
@@ -15,7 +16,7 @@ static char* buffer_page_;  // pointer to buffer page of size 4096.
 static struct FileDescriptorIterator* iterator_;
 
 static void CopyFileDescriptor(struct FileDescriptor* source, struct FileDescriptor* dest);
-
+static bool FlushFileDescriptor(struct FileDescriptor* file_descriptor);
 
 void FileSystemInitialize() {
   cwd_ = (struct FileDescriptor*) kmalloc(sizeof(struct FileDescriptor));
@@ -47,9 +48,15 @@ bool CreateDir(char *dirname) {
       fd->type = DIRECTORY_TYPE;
       // Allocate a block to this directory and store the LBA here.
       fd->start_addr = DiskAllocateBlock();
-      cwd_->filesize += sizeof(struct FileDescriptor);
+      fd->parent_start_addr = cwd_->start_addr;
+
       // Write to disk
       AtaPioWriteToDisk(ATA_PIO_MASTER, cwd_->start_addr, FILE_READ_SIZE, buffer_page_);
+
+      cwd_->filesize += sizeof(struct FileDescriptor);
+      FlushFileDescriptor(cwd_);
+
+      // TODO: update the file descriptor of cwd_ to update the filesize
 
       // Write recursive pointer to itself (i.e. '.') as the first entry
       struct FileDescriptor* self_dir = (struct FileDescriptor*) buffer_page_;
@@ -116,8 +123,6 @@ bool ChangeDir(char * dirname) {
     if (fd->type == EMPTY_TYPE) {
       break;
     }
-
-    // 3 Cases
     if ((fd->type == DIRECTORY_TYPE && strcmp(fd->name, dirname) == 0) ||
         (fd->type == SELF_DIRECTORY_TYPE && strcmp(dirname, ".") == 0) ||
         (fd->type == PARENT_DIRECTORY_TYPE && strcmp(dirname, "..") == 0)) {
@@ -129,13 +134,44 @@ bool ChangeDir(char * dirname) {
   return 0;
 }
 
-bool OpenFile(struct File* file, char* filename) {
+bool CreateFile(char *filename) {
   FileDescriptorIterator_Initialize(iterator_, buffer_page_, cwd_->start_addr);
+  struct FileDescriptor* fd;
+
+  while (FileDescriptorIterator_GetNext(iterator_, &fd)) {
+    if (fd->type == EMPTY_TYPE) {
+      fd->id = DiskAllocateFileId();
+      strcpy(filename, fd->name);
+      fd->type = FILE_TYPE;
+      fd->start_addr = DiskAllocateBlock();
+      DiskMemsetBlock(fd->start_addr, 0);
+      fd->parent_start_addr = cwd_->start_addr;
+
+      AtaPioWriteToDisk(ATA_PIO_MASTER, cwd_->start_addr, FILE_READ_SIZE, buffer_page_);
+      return 1;
+    }
+  }
+  return 0;
+}
+
+bool OpenFile(struct File** file, char* filename) {
+  // allocate space for file and its members
+  *file = (struct File*) kmalloc(sizeof(struct File));
+
+  memset(*file, 0, sizeof(struct File));
+  (*file)->file_descriptor = (struct FileDescriptor*) kmalloc(sizeof(struct FileDescriptor));
+  memset((*file)->file_descriptor, 0, sizeof(struct FileDescriptor));
+
+
+  FileDescriptorIterator_Initialize(iterator_, buffer_page_, cwd_->start_addr);
+  
+
   struct FileDescriptor* fd;
   while (FileDescriptorIterator_GetNext(iterator_, &fd)) {
     if (strcmp(fd->name, filename) == 0) {
-      CopyFileDescriptor(fd, file->file_descriptor);
-      file->cursor = 0;
+      // Set file descriptor to its value from disk
+      CopyFileDescriptor(fd, (*file)->file_descriptor);
+      (*file)->cursor = 0;
       return 1;
     }
   }
@@ -143,43 +179,72 @@ bool OpenFile(struct File* file, char* filename) {
   return 0;
 }
 
-extern int ReadFile(struct File* fp, char* buffer, size_t read_size) {
-  // Special case: cursor is already at unreadable position. Returns 0
-  if (fp->cursor >= fp->file_descriptor->filesize || fp->cursor < 0) {
-    return 0;
-  }
+int WriteFile(struct File* file, char* buffer, size_t size) {
+  // Handle one block first
+  // TODO: load next block if needed
+  // TODO: free up blocks that are not used anymore
+  AtaPioReadFromDisk(ATA_PIO_MASTER, file->file_descriptor->start_addr, 8, buffer_page_);
 
-  logical_block_addr cur_addr = fp->file_descriptor->start_addr;
-  AtaPioReadFromDisk(ATA_PIO_MASTER, cur_addr, FILE_READ_SIZE, buffer_page_);
-  int loaded_size = 4092;
+  int write_size = min(size, FILE_CONTENT_SIZE - file->cursor);
+  memcpy(buffer, &buffer_page_[file->cursor], write_size);
+  AtaPioWriteToDisk(ATA_PIO_MASTER, file->file_descriptor->start_addr, 8, buffer_page_);
+  // Update cursor the cursor by amount of byte written.
+  file->cursor += write_size;
+  // TODO: Handle special case: if file->cursor is at FILE_CONTENT_SIZE,
+  // allocate new block to this file.
 
-  while (loaded_size <= fp->cursor) {
-    cur_addr = buffer_page_[4092];
-    AtaPioReadFromDisk(ATA_PIO_MASTER, cur_addr, FILE_READ_SIZE, buffer_page_);
-    loaded_size += 4092;
+  // Update the filesize if cursor now points to area larger than the filesize
+  if (file->file_descriptor->filesize <= file->cursor) {
+    file->file_descriptor->filesize = file->cursor;
+    // Update the file descriptor filesize and flush to disk
+    FlushFileDescriptor(file->file_descriptor);
   }
-  int bytes_transferred = 0;
-  for (; bytes_transferred < read_size; ++bytes_transferred) {
-    if (fp->cursor >= fp->file_descriptor->filesize) {
-      // We reach EOF before we transferred requested read_size.
-      break;
-    }
-    // i points to the position of the cursor in current loaded file segment in buffer.
-    int i = fp->cursor-loaded_size-4092;
-    if (i >= 4092) {
-      // Load next page!
-      cur_addr = buffer_page_[4092];
-      AtaPioReadFromDisk(ATA_PIO_MASTER, cur_addr, FILE_READ_SIZE, buffer_page_);
-      loaded_size += 4092;
-      i = 0;
-    }
-    ++fp->cursor;
-    *buffer++ = buffer_page_[i];
-  }
-  return bytes_transferred;
+  return write_size;
 }
 
+extern int ReadFile(struct File* fp, char* buffer, size_t read_size) {
+  // Handle one block first
+  // TODO: load next block if needed
+  AtaPioReadFromDisk(ATA_PIO_MASTER, fp->file_descriptor->start_addr, 8, buffer_page_);
+  // Only read up to end of block or end of file.
+  int true_read_size = min(
+    read_size,
+    min(FILE_CONTENT_SIZE-fp->cursor, 
+        fp->file_descriptor->filesize - fp->cursor));
+  memcpy(&buffer_page_[fp->cursor], buffer, true_read_size);
+  return true_read_size;
+}
 
 static void CopyFileDescriptor(struct FileDescriptor* source, struct FileDescriptor* dest) {
   memcpy((char*)source, (char*)dest, sizeof(struct FileDescriptor));
+}
+
+static bool FlushFileDescriptor(struct FileDescriptor* file_descriptor) {
+  if (file_descriptor->id == 0) {
+    // 'file_descriptor' is root directory descriptor. Currently we
+    // don't store root directory information on disk.
+    return 0;
+  }
+  // Load and traverse the directory listing to find the file descriptor
+  FileDescriptorIterator_Initialize(iterator_, buffer_page_, file_descriptor->parent_start_addr);
+  struct FileDescriptor* fd;
+  while (FileDescriptorIterator_GetNext(iterator_, &fd)) {
+    if (fd->id == file_descriptor->id) {
+      // Overwrite fd content and flush to disk
+      memcpy((char*) file_descriptor, (char*) fd, sizeof(struct FileDescriptor));
+      AtaPioWriteToDisk(ATA_PIO_MASTER, iterator_->current_buffer_lba, 8, iterator_->buffer);
+      return 1;
+    }
+  }
+  // File descriptor not found!
+  return 0;
+}
+
+
+void CloseFile(struct File** file) {
+  // Free all allocated memories during OpenFile.
+  kfree((*file)->file_descriptor);
+  kfree((*file));
+  // Set file to 0
+  *file = 0;
 }

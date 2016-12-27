@@ -8,4 +8,7 @@ extern void* kmalloc(size_t size);
 extern void kfree(void* address);
 extern void KmallocInitialize();
 
+// Debugging
+extern void KmallocDisplayLists();
+
 #endif  //__TIO_OS_KMALLOC_H__

@@ -7,6 +7,7 @@
 struct FileDescriptorIterator {
   char* buffer;
   int cursor;
+  int current_buffer_lba;
 };
 
 extern void FileDescriptorIterator_Initialize(struct FileDescriptorIterator* iterator, char* buffer, logical_block_addr addr);
