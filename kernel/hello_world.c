@@ -15,6 +15,7 @@ static void CliHandleCommand();
 static void CliUpdateCommandBuffer(char c);
 static bool CliDetectMultiwordCommand();
 static void CliHandleWriteFile(struct StringTokenizer* tokenizer);
+static void CliHandleReadFile(struct StringTokenizer* tokenizer);
 
 void kernel_main() {
   __asm__("movw $0x10, %ax\n\t"
@@ -145,6 +146,8 @@ static bool CliDetectMultiwordCommand() {
       }
     } else if (strcmp(token, "write") == 0) {
       CliHandleWriteFile(tokenizer);
+    } else if (strcmp(token, "read") == 0) {
+      CliHandleReadFile(tokenizer);
     } else {
       command_found = 0;
     }
@@ -192,6 +195,40 @@ CleanupOpenFilePhase:
 
 CleanupInitialCheck:
   kfree(filename);
+}
 
-  return;
+static void CliHandleReadFile(struct StringTokenizer* tokenizer) {
+  char* filename = (char*) kmalloc(4096);
+  if (!StringTokenizer_GetNext(tokenizer, filename)) {
+    PrintString("Error: read: file name not supplied.\n");
+    goto CleanupInitialCheck;
+  }
+
+  struct File* file;
+  if (!OpenFile(&file, filename)) {
+    PrintString("Error: read: file not found: ");
+    PrintString(filename);
+    PrintString("\n");
+    goto CleanupOpenFilePhase;
+  }
+
+  char* data = (char*) kmalloc(4096);
+  int written_len = ReadFile(file, data, strlen(data));
+  PrintInt(written_len);
+  PrintString(" bytes is read from ");
+  PrintString(filename);
+  PrintString("\n");
+
+  for (int i = 0; i < written_len; ++i) {
+    PrintChar(data[i]);
+  }
+
+CleanupReadPhase:
+  kfree(data);
+
+CleanupOpenFilePhase:
+  CloseFile(&file);
+
+CleanupInitialCheck:
+  kfree(filename);
 }

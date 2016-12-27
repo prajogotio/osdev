@@ -162,9 +162,7 @@ bool OpenFile(struct File** file, char* filename) {
   (*file)->file_descriptor = (struct FileDescriptor*) kmalloc(sizeof(struct FileDescriptor));
   memset((*file)->file_descriptor, 0, sizeof(struct FileDescriptor));
 
-
   FileDescriptorIterator_Initialize(iterator_, buffer_page_, cwd_->start_addr);
-  
 
   struct FileDescriptor* fd;
   while (FileDescriptorIterator_GetNext(iterator_, &fd)) {
