@@ -38,11 +38,11 @@ static void AtaPioDelay400ns();
 
 static void AtaPioIrqPrimary() {
   __asm__("pusha");
-  if (current_mode_ == ATA_PIO_READ_MODE) {
-    AtaPioIrqHandleRead();
-  } else {
-    AtaPioIrqHandleWrite();
-  }
+  // if (current_mode_ == ATA_PIO_READ_MODE) {
+  //   AtaPioIrqHandleRead();
+  // } else {
+  //   AtaPioIrqHandleWrite();
+  // }
   InterruptDone(14);
   __asm__("popa\n\t"
           "leave\n\t"
@@ -50,7 +50,7 @@ static void AtaPioIrqPrimary() {
 }
 
 static void AtaPioIrqHandleRead() {
-  while (ReadFromIoPort(ATA_PIO_CONTROLLER_PORT) & 0x80);  
+  while (!(ReadFromIoPort(ATA_PIO_CONTROLLER_PORT) & 0x8));
   __asm__("cld");   // REP INSW set to auto increment.
   __asm__("movl %0, %%edi" : : "r" (current_read_buffer_pointer_));
   // Specify port on which the data string will be read.
@@ -61,8 +61,14 @@ static void AtaPioIrqHandleRead() {
   // Advance buffer pointer by 512 bytes.
   current_read_buffer_pointer_ += 512;
   --number_of_sectors_to_process_;
+
   // Allow for 400ns delay to allow the controller to update its status.
   AtaPioDelay400ns();
+
+  // Read error port
+  ReadFromIoPort(ATA_PIO_ERROR_PORT);
+
+  while (ReadFromIoPort(ATA_PIO_CONTROLLER_PORT) & 0x80);
   if (number_of_sectors_to_process_ == 0) {
     current_read_done_ = 1;
     AtaPioUnlock();
@@ -70,12 +76,12 @@ static void AtaPioIrqHandleRead() {
 }
 
 static void AtaPioIrqHandleWrite() {
-  while (ReadFromIoPort(ATA_PIO_CONTROLLER_PORT) & 0x80);
   if (number_of_sectors_to_process_ == 0) {
     // Writing done!
     AtaPioUnlock();
     return;
   }
+  while (!(ReadFromIoPort(ATA_PIO_CONTROLLER_PORT) & 0x8));
   __asm__("cld");   // OUTSW set to auto increment.  
   __asm__("movl %0, %%esi" : : "r" (current_write_buffer_pointer_));  
   // Specify port on which the data string will be read.
@@ -84,6 +90,7 @@ static void AtaPioIrqHandleWrite() {
   int write_out = 0;
   for (int i = 0; i < 256; ++i) {
     __asm__("outsw");
+    for (int i = 0; i < 10; ++i);
   }
   // Advance buffer pointer by 512 bytes.
   current_write_buffer_pointer_ += 512;
@@ -92,6 +99,7 @@ static void AtaPioIrqHandleWrite() {
   AtaPioDelay400ns();
   // Send clear cache command
   WriteToIoPort(ATA_PIO_CONTROLLER_PORT, ATA_PIO_CACHE_FLUSH_COMMAND);
+  while (ReadFromIoPort(ATA_PIO_CONTROLLER_PORT) & 0x80);
 }
 
 static void AtaPioIrqSecondary() {
@@ -110,6 +118,9 @@ void AtaPioInitialize() {
 void AtaPioReadFromDisk(uint8_t ata_pio_target, uint32_t lba_28bit, uint8_t num_of_sectors, char* read_buffer) {
   while (!AtaPioLock());
 
+  while (ReadFromIoPort(ATA_PIO_CONTROLLER_PORT) & 0x80);
+  while (!(ReadFromIoPort(ATA_PIO_CONTROLLER_PORT) & 0x40));
+
   current_read_buffer_pointer_ = read_buffer;
   current_mode_ = ATA_PIO_READ_MODE;
   number_of_sectors_to_process_ = num_of_sectors;
@@ -124,16 +135,24 @@ void AtaPioReadFromDisk(uint8_t ata_pio_target, uint32_t lba_28bit, uint8_t num_
   WriteToIoPort(ATA_PIO_SECTOR_LBA_28_2_PORT, (lba_28bit >> 8) & 0xff);
   WriteToIoPort(ATA_PIO_SECTOR_LBA_28_3_PORT, (lba_28bit >> 16) & 0xff);
 
+  while (ReadFromIoPort(ATA_PIO_CONTROLLER_PORT) & 0x80);
+
   WriteToIoPort(ATA_PIO_CONTROLLER_PORT, ATA_PIO_READ_SECTORS_COMMAND);
 
   AtaPioDelay400ns();
 
   // Blocking implementation
-  while (!current_read_done_);
+  while (!current_read_done_) {
+    AtaPioIrqHandleRead();
+  }
 }
 
 void AtaPioWriteToDisk(uint8_t ata_pio_target, uint32_t lba_28bit, uint8_t num_of_sectors, char* write_buffer) {
   while (!AtaPioLock());
+
+
+  while (ReadFromIoPort(ATA_PIO_CONTROLLER_PORT) & 0x80);
+  while (!(ReadFromIoPort(ATA_PIO_CONTROLLER_PORT) & 0x40));
 
   current_write_buffer_pointer_ = write_buffer;
   current_mode_ = ATA_PIO_WRITE_MODE;
@@ -147,8 +166,14 @@ void AtaPioWriteToDisk(uint8_t ata_pio_target, uint32_t lba_28bit, uint8_t num_o
   WriteToIoPort(ATA_PIO_SECTOR_LBA_28_1_PORT, lba_28bit & 0xff);
   WriteToIoPort(ATA_PIO_SECTOR_LBA_28_2_PORT, (lba_28bit >> 8) & 0xff);
   WriteToIoPort(ATA_PIO_SECTOR_LBA_28_3_PORT, (lba_28bit >> 16) & 0xff);
+
+  while (ReadFromIoPort(ATA_PIO_CONTROLLER_PORT) & 0x80);
+
   WriteToIoPort(ATA_PIO_CONTROLLER_PORT, ATA_PIO_WRITE_SECTORS_COMMAND);
-  AtaPioIrqHandleWrite();
+
+  while (number_of_sectors_to_process_ != 0) {
+    AtaPioIrqHandleWrite();
+  }
 }
 
 void AtaPioDelay400ns() {

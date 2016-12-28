@@ -1,6 +1,7 @@
 #include "pit.h"
 #include "hal.h"
 #include "stdint.h"
+#include "task.h"
 
 #define PIT_REG_COUNTER0    0x40
 #define PIT_REG_COUNTER1    0x41
@@ -8,16 +9,11 @@
 #define PIT_REG_COMMAND     0x43
 
 
-uint32_t pit_ticks_ = 0;
+static uint32_t pit_ticks_ = 0;
 
-void PitIrq() {
-  __asm__("pusha\n\t");
+
+void PitIncreaseTickCount() {
   pit_ticks_++;
-  InterruptDone(0);
-
-  __asm__("popa\n\t"
-          "leave\n\t"
-          "iret\n\t");
 }
 
 uint32_t PitSetTickCount(uint32_t i) {

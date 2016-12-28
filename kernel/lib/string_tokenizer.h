@@ -3,7 +3,7 @@
 
 #include "core/stdint.h"
 
-struct __attribute__((packed)) StringTokenizer {
+struct StringTokenizer {
   char* str;
   char delim;
   int cursor;

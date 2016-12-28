@@ -53,11 +53,6 @@ bool CreateDir(char *dirname) {
       // Write to disk
       AtaPioWriteToDisk(ATA_PIO_MASTER, cwd_->start_addr, FILE_READ_SIZE, buffer_page_);
 
-      cwd_->filesize += sizeof(struct FileDescriptor);
-      FlushFileDescriptor(cwd_);
-
-      // TODO: update the file descriptor of cwd_ to update the filesize
-
       // Write recursive pointer to itself (i.e. '.') as the first entry
       struct FileDescriptor* self_dir = (struct FileDescriptor*) buffer_page_;
       memcpy((char*)fd, (char*)self_dir, sizeof(struct FileDescriptor));
@@ -68,8 +63,17 @@ bool CreateDir(char *dirname) {
       parent_dir->type = PARENT_DIRECTORY_TYPE;
 
       memset((char*) (buffer_page_ + 2 * sizeof(struct FileDescriptor)), 0, 4096 - 2 * sizeof(struct FileDescriptor));
-      // Add parent directory
+
       AtaPioWriteToDisk(ATA_PIO_MASTER, self_dir->start_addr, 8, buffer_page_);
+      
+
+      // Flush file descriptor to update cwd info.
+      // Do this after the above, because they share buffer_page_!
+      // TODO: change this design so we allocate new buffer_page when
+      // necessary to reduce complexity of sharing
+      cwd_->filesize += sizeof(struct FileDescriptor);
+      FlushFileDescriptor(cwd_);
+
       return 1;
     }
   }

@@ -1,7 +1,7 @@
 KFLAGS=-ffreestanding -std=c99
 KINCLUDE=-Ikernel
 
-_CORE_MODULE = print hal gdt idt pit pic keyboard debug physical string page_table_entry page_directory_entry virtual stdin_buffer ata_pio file_system kmalloc disk_allocation math
+_CORE_MODULE = print hal gdt idt pit pic keyboard debug physical string page_table_entry page_directory_entry virtual stdin_buffer ata_pio file_system kmalloc disk_allocation math context_switch task pit_irq task_preempt
 _LIB_MODULE = string_tokenizer file_descriptor_iterator
 
 # Note: $(patsubst pattern,replacement,string)
@@ -23,6 +23,9 @@ hello_world: kernel/hello_world.c kernel/hello_world.ld $(CORE_OBJS) $(LIB_OBJS)
 	i686-elf-gcc -ffreestanding -std=c99 -c kernel/hello_world.c -o kernel/hello_world.o $(KINCLUDE)
 	i686-elf-ld -T kernel/hello_world.ld --oformat=binary -nostdlib -o kernel/hello_world.bin kernel/hello_world.o $(CORE_OBJS) $(LIB_OBJS)
 
+kernel/core/%.o: kernel/core/%.s
+	nasm -f elf -o $@ $<
+
 # Compile the core objects
 # Note $@ := left hand side of ':'
 #      $< := first item in the dependency list
@@ -32,6 +35,7 @@ kernel/core/%.o: kernel/core/%.c kernel/core/%.h
 
 kernel/lib/%.o: kernel/lib/%.c kernel/lib/%.h
 	i686-elf-gcc $(KFLAGS) $(KINCLUDE) -c $< -o $@
+
 
 clean:
 	rm $(CORE_OBJS) $(LIB_OBJS) kernel/*.o kernel/*.bin *.bin *.img

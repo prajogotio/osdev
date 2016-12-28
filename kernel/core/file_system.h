@@ -27,7 +27,7 @@ struct __attribute__ ((packed)) FileDescriptor {
                                          // contains this descriptor.
 };
 
-struct __attribute__ ((packed)) File {
+struct File {
   struct FileDescriptor* file_descriptor;
   int cursor;
 };

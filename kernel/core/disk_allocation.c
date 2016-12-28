@@ -113,9 +113,10 @@ logical_block_addr DiskAllocateBlock() {
     // i manages blocks [i * 4096 * 8, (i + 1) 4096 * 8 - 1]
     AtaPioReadFromDisk(ATA_PIO_MASTER, ALLOCATION_TABLE_LBA + 8 * i, 8, buffer_);
     for (int j = 0; j < 4096 * 8; ++j) {
-      if (buffer_[j/8] & (1 << j)) continue;
+      if (buffer_[j/8] & (1 << (j%8))) continue;
       // We found an empty one!
       buffer_[j/8] |= 1 << (j % 8);
+
       AtaPioWriteToDisk(ATA_PIO_MASTER, ALLOCATION_TABLE_LBA + 8 * i, 8, buffer_);
       // Return the LBA of that block
       return (i * 4096 * 8 + j) * 4096 / 512;

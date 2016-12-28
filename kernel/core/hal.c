@@ -8,6 +8,7 @@
 #include "virtual.h"
 #include "kmalloc.h"
 #include "file_system.h"
+#include "task.h"
 
 uint32_t * Hal_memory_information = 0;
 
@@ -29,6 +30,11 @@ int HalInitialize() {
   InitializeDiskManager();
   KmallocInitialize();
   FileSystemInitialize();
+
+  // Enable interrupt before calling TaskInitialize so we can set the correct
+  // flags for main task.
+  __asm__("sti");
+  TaskInitialize();
   PrintString("HAL Initialized!\n");
   return 0;
 }

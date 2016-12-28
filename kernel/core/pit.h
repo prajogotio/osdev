@@ -24,7 +24,9 @@
 #define PIT_OCW_COUNTER_1            0x40
 #define PIT_OCW_COUNTER_2            0x80
 
+
 extern void PitIrq();
+extern void PitIncreaseTickCount();
 extern uint32_t PitSetTickCount(uint32_t i);
 extern uint32_t PitGetTickCount();
 extern void PitSendCommand(uint8_t cmd);

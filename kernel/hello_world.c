@@ -2,6 +2,7 @@
 #include "core/debug.h"
 #include "core/hal.h"
 #include "core/kmalloc.h"
+#include "core/task.h"
 #include "lib/string_tokenizer.h"
 
 #define BUFFER_SIZE 4096
@@ -10,6 +11,9 @@ static char* CLI_PREFIX = "\ntio-os$ ";
 
 static char command_buffer_[BUFFER_SIZE];
 static int command_size_ = 0;
+
+static void TimeDisplayer();
+static void CommandLineInterface();
 
 static void CliHandleCommand();
 static void CliUpdateCommandBuffer(char c);
@@ -24,6 +28,8 @@ void kernel_main() {
           "movw %ax, %fs\n\t"
           "movw %ax, %gs\n\t");
 
+  __asm__("movl $0xc0090000, %esp\n\t");
+  __asm__("movl %esp, %ebp");
   Hal_memory_information = 0;
   __asm__("movl %%ebx, %0" : "=r"(Hal_memory_information));
 
@@ -32,25 +38,40 @@ void kernel_main() {
   PrintString("Initializing HAL...\n");
 
   HalInitialize();
-  ClearScreen();
 
-  __asm__("sti");
+  // Create 2 tasks for command line
+  struct Task* timer_task = (struct Task*) kmalloc(sizeof(struct Task));
+  TaskCreate(timer_task, TimeDisplayer, main_task.registers.eflags, (uint32_t*) main_task.registers.cr3);
+  TaskSchedule(timer_task);
 
-  PrintString("\n"
-              "Welcome to Tio OS! The best OS ever!\n"
-              "Timer and keyboard kinda works!\n");
-  PrintString(CLI_PREFIX);
+
+  struct Task* cli_task = (struct Task*) kmalloc(sizeof(struct Task));
+  TaskCreate(cli_task, CommandLineInterface, main_task.registers.eflags, main_task.registers.cr3);
+  TaskSchedule(cli_task);
 
 
   // For now, always reformat the disk first
-  DiskFormat();
+  DiskFormat(); 
 
+  for (;;);
+}
+
+static void TimeDisplayer() {
   for (;;) {
     DebugMoveCursor(0, 0);
     DebugPrintString("Uptime: ");
     DebugPrintInt(PitGetTickCount()/100);
     DebugPrintString("s");
+  }
+}
 
+static void CommandLineInterface() {
+  ClearScreen();
+  PrintString("\n"
+              "Welcome to Tio OS! The best OS ever!\n"
+              "Timer and keyboard kinda works!\n");
+  PrintString(CLI_PREFIX);
+  for(;;) {
     while (!StdinBufferIsEmpty()) {
       char curkey = StdinBufferReadByte();
       if (curkey == '\n') {
@@ -69,9 +90,6 @@ void kernel_main() {
       }
     }
   }
-
-  __asm__("cli \n\t"
-          "hlt \n\t");
 }
 
 static void CliUpdateCommandBuffer(char curkey) {
