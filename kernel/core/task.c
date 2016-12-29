@@ -10,8 +10,7 @@
 
 static struct Task* running_task;
 struct Task main_task;
-static void TaskCreateIretFrame(uint32_t* esp, uint32_t eflags, uint32_t eip);
-
+static void TaskCreateIretAndPushadFrame(struct Task* task);
 
 
 void TaskInitialize() {
@@ -33,6 +32,8 @@ void TaskInitialize() {
 }
 
 void TaskCreate(struct Task* task, void (*main)(), uint32_t flags, uint32_t* page_directory) {
+  // TODO: when user process is implemented, create a new page directory and
+  // map user stack and kernel region to the directory.
   task->registers.eax = 0;
   task->registers.ebx = 0;
   task->registers.ecx = 0;
@@ -41,25 +42,47 @@ void TaskCreate(struct Task* task, void (*main)(), uint32_t flags, uint32_t* pag
   task->registers.edi = 0;
   task->registers.eflags = flags;
   task->registers.eip = (uint32_t) main;
-  // Allocate a kernel stack.
-  task->registers.ebp = ((uint32_t) kmalloc(4096)) + 0x9ff;
-  task->registers.esp = task->registers.ebp-5*32;
-  // Push an IRET frame
-  TaskCreateIretFrame((uint32_t*) task->registers.esp, flags, task->registers.eip);
+  // Allocate kernel stack.
+  // TODO: when user process is implemented, TSS will be used
+  // to lead esp0 and ss0, so esp and ebp below should be set
+  // to user stack instead.
+  task->registers.esp = ((uint32_t) kmalloc(4096)) + 0x9ff;
+  task->registers.ebp = task->registers.esp;
+  
   task->registers.cr3 = (uint32_t) page_directory;
   task->next = 0;
+
+  // Push an IRET and PUSHAD frame
+  TaskCreateIretAndPushadFrame(task);
 }
 
-static void TaskCreateIretFrame(uint32_t* esp, uint32_t eflags, uint32_t eip) {
-  // Push SS, ESP, EFLAGS, CS, EIP
+static void TaskCreateIretAndPushadFrame(struct Task* task) {
+  // Set up values in kernel stack so that when we call
+  // POPAD and IRET, the correct values for the registers
+  // are automatically set.
+
+  // Push SS, ESP, EFLAGS, CS, EIP, then PUSHAD
   // For now, we create processes at ring 0 only: SS = 0x10, CS = 0x08
   // ESP is set
+  task->registers.esp -= 13; // Allocate spaces for IRET and PUSHAD
+  uint32_t* esp = (uint32_t*) task->registers.esp;
 
-  *esp = eip;
-  *(esp+1) = 0x08;
-  *(esp+2) = eflags;
-  *(esp+3) = (uint32_t) esp;      // Not used for IRET to same
-  *(esp+4) = 0x10;                // privilege level.
+  // PUSHAD frame
+  *esp = task->registers.edi;
+  *(esp+1) = task->registers.esi;
+  *(esp+2) = task->registers.ebp;
+  *(esp+3) = (uint32_t)esp + 4 * 8; // ORIGINAL ESP (points to EIP position in stack)
+  *(esp+4) = task->registers.ebx;
+  *(esp+5) = task->registers.edx;
+  *(esp+6) = task->registers.ecx;
+  *(esp+7) = task->registers.eax;
+
+  // IRET FRAME
+  *(esp+8) = task->registers.eip;
+  *(esp+9) = 0x08;
+  *(esp+10) = task->registers.eflags;
+  *(esp+11) = 0;      // Not used for IRET to same
+  *(esp+12) = 0;      // privilege level.
 }
 
 struct Task* TaskGetReadyList() {

@@ -8,6 +8,8 @@
 static int cursorX_ = 0;
 static int cursorY_ = 0;
 
+static int lock_debug_print_ = 0;
+
 static void MoveToNextRow();
 
 void DebugPrintChar(char c) {
@@ -80,4 +82,14 @@ void DebugPrintInt(int value) {
 void DebugMoveCursor(unsigned int x, unsigned int y) {
   cursorX_ = x;
   cursorY_ = y;
+}
+
+int DebugPrintLock() {
+  int testvar = 1;
+  __asm__("xchg %%edx, (%%eax)" : "=d"(testvar) : "d"(testvar), "a"(&lock_debug_print_));
+  return !testvar;
+}
+
+void DebugPrintUnlock() {
+  lock_debug_print_ = 0;
 }

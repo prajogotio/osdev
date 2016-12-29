@@ -14,6 +14,7 @@ static int command_size_ = 0;
 
 static void TimeDisplayer();
 static void CommandLineInterface();
+static void TioOsMarquee();
 
 static void CliHandleCommand();
 static void CliUpdateCommandBuffer(char c);
@@ -46,6 +47,9 @@ void kernel_main() {
   TaskCreate(timer_task, TimeDisplayer, main_task.registers.eflags, (uint32_t*) main_task.registers.cr3);
   TaskSchedule(timer_task);
 
+  struct Task* banner_task = (struct Task*) kmalloc(sizeof(struct Task));
+  TaskCreate(banner_task, TioOsMarquee, main_task.registers.eflags, (uint32_t*) main_task.registers.cr3);
+  TaskSchedule(banner_task);
 
   struct Task* cli_task = (struct Task*) kmalloc(sizeof(struct Task));
   TaskCreate(cli_task, CommandLineInterface, main_task.registers.eflags, (uint32_t*) main_task.registers.cr3);
@@ -57,12 +61,44 @@ void kernel_main() {
   for (;;);
 }
 
-static void TimeDisplayer() {
+static void TioOsMarquee() {
+  // Just used to test multi tasking
+  int last_moved = PitGetTickCount()-100;
+  char* marquee_buffer = (char*) kmalloc(15);
+  memset(marquee_buffer, 0, 15);
+  char* banner = ":Tio OS:";
+  int cursor = 0;
   for (;;) {
+    int now = PitGetTickCount();
+    if (now - last_moved >= 100) {
+      last_moved = now;
+      memset(marquee_buffer, '=', 14);
+      cursor = (cursor+1)%14;
+      for (int i = 0; i < 8; ++i) {
+        marquee_buffer[(cursor+i)%14] = banner[i];
+      }
+      while (!DebugPrintLock());
+      DebugMoveCursor((80-15)/2, 0);
+      DebugPrintString(marquee_buffer);
+      DebugPrintUnlock();
+    }
+  }
+}
+
+static void TimeDisplayer() {
+  int last_updated = PitGetTickCount() - 100;
+  for (;;) {
+    int now = PitGetTickCount();
+    if (now - last_updated < 100) {
+      continue;
+    }
+    last_updated = now;
+    while (!DebugPrintLock());
     DebugMoveCursor(0, 0);
     DebugPrintString("Uptime: ");
     DebugPrintInt(PitGetTickCount()/100);
     DebugPrintString("s");
+    DebugPrintUnlock();
   }
 }
 
