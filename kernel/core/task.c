@@ -41,9 +41,9 @@ void TaskCreate(struct Task* task, void (*main)(), uint32_t flags, uint32_t* pag
   task->registers.edi = 0;
   task->registers.eflags = flags;
   task->registers.eip = (uint32_t) main;
-  // Test: use exactly the same page directory first.
-  task->registers.esp = (uint32_t) kmalloc(4096) + 0x900;
-  task->registers.ebp = task->registers.esp + 5*32;
+  // Allocate a kernel stack.
+  task->registers.ebp = ((uint32_t) kmalloc(4096)) + 0x9ff;
+  task->registers.esp = task->registers.ebp-5*32;
   // Push an IRET frame
   TaskCreateIretFrame((uint32_t*) task->registers.esp, flags, task->registers.eip);
   task->registers.cr3 = (uint32_t) page_directory;

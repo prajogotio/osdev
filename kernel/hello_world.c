@@ -39,6 +39,8 @@ void kernel_main() {
 
   HalInitialize();
 
+  ClearScreen();
+
   // Create 2 tasks for command line
   struct Task* timer_task = (struct Task*) kmalloc(sizeof(struct Task));
   TaskCreate(timer_task, TimeDisplayer, main_task.registers.eflags, (uint32_t*) main_task.registers.cr3);
@@ -46,12 +48,11 @@ void kernel_main() {
 
 
   struct Task* cli_task = (struct Task*) kmalloc(sizeof(struct Task));
-  TaskCreate(cli_task, CommandLineInterface, main_task.registers.eflags, main_task.registers.cr3);
+  TaskCreate(cli_task, CommandLineInterface, main_task.registers.eflags, (uint32_t*) main_task.registers.cr3);
   TaskSchedule(cli_task);
 
-
   // For now, always reformat the disk first
-  DiskFormat(); 
+  DiskFormat();
 
   for (;;);
 }

@@ -3,7 +3,7 @@
 
 #include "stdint.h"
 
-#define MAX_DESCRIPTORS              5
+#define MAX_DESCRIPTORS              6
 #define GDT_DESC_ACCESS         0x0001
 #define GDT_DESC_READWRITE      0x0002
 #define GDT_DESC_EXPANSION      0x0004

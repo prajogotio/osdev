@@ -1,31 +1,21 @@
 #include "ring.h"
+#include "gdt.h"
 
+static struct TssEntry tss;
 
-void RingEnterUserMode() {
-  __asm__(
-    "cli\n\t"               
-    // Preparing for IRET. Data selector for user mode is 0x20, and the
-    // last 3 bits are RPL for ring 3, hence 0x23. All segments must be
-    // set to this value.
-    "mov $0x23, %ax\n\t"
-    "mov %ax, %ds\n\t"
-    "mov %ax, %es\n\t"
-    "mov %ax, %fs\n\t"
-    "mov %ax, %gs\n\t"      
-    
-    // Requirement for IRET
-    "push $0x23\n\t"        // SS
-    "push esp\n\t"          // ESP
-    "pushf\n\t"             // EFLAGS
-    "push 0x1b\n\t"         // CS (user mode code selector = 3 * 8 = 0x18,
-                            // lower 3 bits = 011 --> 0x1b)
-                            // Hence we are requesting to enter to protection
-                            // level ring 3
-    "lea (a), %eax\n\t"     // Getting EIP to be used by IRET
-    "push eax\n\t"          // This means, when IRET is called, 0x1b:a will be
-    "iret\n\t"              // called.
-  "a:\n\t"
-    "add esp, 4\n\t"        // Fix stack
-  );
-  for(;;);
+void TssFlush(uint16_t tss_selector) {
+  __asm__("ltr (%0)" : : "a"(tss_selector));
+}
+
+void TssInstall(uint32_t index, uint16_t kernel_segment_selector, uint16_t kernel_esp) {
+
+  uint32_t base = (uint32_t) &tss;
+  GdtSetDescriptor(index, base, base + sizeof(struct TssEntry),
+    GDT_DESC_ACCESS|GDT_DESC_EXEC_CODE|GDT_DESC_DPL|GDT_DESC_MEMORY,
+    0);
+  memset((void*) &tss, 0, sizeof(struct TssEntry));
+  tss.ss0 = kernel_segment_selector;
+  tss.esp0 = kernel_esp;
+
+  TssFlush(idx * sizeof(struct GdtDescriptor));
 }
