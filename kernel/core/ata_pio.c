@@ -38,11 +38,6 @@ static void AtaPioDelay400ns();
 
 static void AtaPioIrqPrimary() {
   __asm__("pusha");
-  // if (current_mode_ == ATA_PIO_READ_MODE) {
-  //   AtaPioIrqHandleRead();
-  // } else {
-  //   AtaPioIrqHandleWrite();
-  // }
   InterruptDone(14);
   __asm__("popa\n\t"
           "leave\n\t"
@@ -76,11 +71,6 @@ static void AtaPioIrqHandleRead() {
 }
 
 static void AtaPioIrqHandleWrite() {
-  if (number_of_sectors_to_process_ == 0) {
-    // Writing done!
-    AtaPioUnlock();
-    return;
-  }
   while (!(ReadFromIoPort(ATA_PIO_CONTROLLER_PORT) & 0x8));
   __asm__("cld");   // OUTSW set to auto increment.  
   __asm__("movl %0, %%esi" : : "r" (current_write_buffer_pointer_));  
@@ -100,6 +90,12 @@ static void AtaPioIrqHandleWrite() {
   // Send clear cache command
   WriteToIoPort(ATA_PIO_CONTROLLER_PORT, ATA_PIO_CACHE_FLUSH_COMMAND);
   while (ReadFromIoPort(ATA_PIO_CONTROLLER_PORT) & 0x80);
+
+  if (number_of_sectors_to_process_ == 0) {
+    // Writing done!
+    AtaPioUnlock();
+    return;
+  }
 }
 
 static void AtaPioIrqSecondary() {
@@ -168,7 +164,6 @@ void AtaPioWriteToDisk(uint8_t ata_pio_target, uint32_t lba_28bit, uint8_t num_o
   WriteToIoPort(ATA_PIO_SECTOR_LBA_28_3_PORT, (lba_28bit >> 16) & 0xff);
 
   while (ReadFromIoPort(ATA_PIO_CONTROLLER_PORT) & 0x80);
-
   WriteToIoPort(ATA_PIO_CONTROLLER_PORT, ATA_PIO_WRITE_SECTORS_COMMAND);
 
   while (number_of_sectors_to_process_ != 0) {
