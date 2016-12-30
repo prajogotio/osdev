@@ -38,7 +38,6 @@ void FileSystemInitialize() {
 bool CreateDir(char *dirname) {
   FileDescriptorIterator_Initialize(iterator_, buffer_page_, cwd_->start_addr);
   struct FileDescriptor* fd;
-
   while (FileDescriptorIterator_GetNext(iterator_, &fd)) {
     if (fd->type == EMPTY_TYPE) {
       // Found an empty space for our new directory descriptor
@@ -161,7 +160,6 @@ bool CreateFile(char *filename) {
 bool OpenFile(struct File** file, char* filename) {
   // allocate space for file and its members
   *file = (struct File*) kmalloc(sizeof(struct File));
-
   memset(*file, 0, sizeof(struct File));
   (*file)->file_descriptor = (struct FileDescriptor*) kmalloc(sizeof(struct FileDescriptor));
   memset((*file)->file_descriptor, 0, sizeof(struct FileDescriptor));

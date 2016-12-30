@@ -10,6 +10,8 @@
 #include "file_system.h"
 #include "task.h"
 
+#define BSS_SECTOR 4096*10
+
 uint32_t * Hal_memory_information = 0;
 
 static void InitializeMemoryManagement();
@@ -90,10 +92,10 @@ static void InitializeMemoryManagement() {
   PrintString("MemoryMap entries: ");
 
   // Initialize memory map
-  // int mmap_address = KERNEL_OFFSET + kernel_size + 4096;
-  // Why additional 4096? Because we want to give room for data & bss sector
+  // int mmap_address = KERNEL_OFFSET + kernel_size + BSS_SECTOR;
+  // Why additional BSS_SECTOR? Because we want to give room for data & bss sector
   // (initialized & uninitialized data resp.)
-  int mmap_address = KERNEL_OFFSET + kernel_size + 4096;
+  int mmap_address = KERNEL_OFFSET + kernel_size + BSS_SECTOR;
   PrintString("Initializing mmap at ");
   PrintHex(mmap_address);
   PrintString("\n");
@@ -129,7 +131,7 @@ static void InitializeMemoryManagement() {
   // Our kernel sector should be protected from allocation.
   // Also protect our DATA/BSS section and Mmap table
   // Since we map 3gb virtual 0x00100000 physical, use that physical base
-  MmapDeinitializeRegion(0x00100000, kernel_size + 4096 + 4096);
+  MmapDeinitializeRegion(0x00100000, kernel_size + 4096 + BSS_SECTOR);
   // Protect stack (located at 0x00090000) and grows downward
   MmapDeinitializeRegion(0x00080000, 0x00010fff);
 

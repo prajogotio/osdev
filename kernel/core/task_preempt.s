@@ -20,11 +20,12 @@ TaskPreempt:
   add esp, 4
 
   ; eax now contains the addres of the next task
+  mov ecx, eax  ; store to ecx
 
   push eax
   call TaskSetRunningTask
   add esp, 4
 
-  push eax   ; push second argument next_reg
+  push ecx   ; push second argument next_reg
   push ebx   ; push first argument old_reg
   call TaskContextSwitch

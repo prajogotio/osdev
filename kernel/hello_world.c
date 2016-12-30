@@ -23,41 +23,34 @@ static void CliHandleWriteFile(struct StringTokenizer* tokenizer);
 static void CliHandleReadFile(struct StringTokenizer* tokenizer);
 
 void kernel_main() {
-  __asm__("movw $0x10, %ax\n\t"
-          "movw %ax, %ds\n\t"
-          "movw %ax, %es\n\t"
-          "movw %ax, %fs\n\t"
-          "movw %ax, %gs\n\t");
-
-  __asm__("movl $0xc0090000, %esp\n\t");
-  __asm__("movl %esp, %ebp");
-  Hal_memory_information = 0;
   __asm__("movl %%ebx, %0" : "=r"(Hal_memory_information));
-
   ClearScreen();
-
   PrintString("Initializing HAL...\n");
-
   HalInitialize();
 
-  ClearScreen();
-
-  // Create 2 tasks for command line
   struct Task* timer_task = (struct Task*) kmalloc(sizeof(struct Task));
-  TaskCreate(timer_task, TimeDisplayer, main_task.registers.eflags, (uint32_t*) main_task.registers.cr3);
+  memset(timer_task, 0, sizeof(struct Task));
+  TaskCreate(timer_task, TimeDisplayer, main_task.registers.eflags, (uint32_t*) main_task.registers.cr3);  
   TaskSchedule(timer_task);
 
+
   struct Task* banner_task = (struct Task*) kmalloc(sizeof(struct Task));
+  memset(banner_task, 0, sizeof(struct Task));
   TaskCreate(banner_task, TioOsMarquee, main_task.registers.eflags, (uint32_t*) main_task.registers.cr3);
-  TaskSchedule(banner_task);
+  TaskSchedule(banner_task);  
 
   struct Task* cli_task = (struct Task*) kmalloc(sizeof(struct Task));
+  memset(cli_task, 0, sizeof(struct Task));
+  PrintHex(cli_task);
+
   TaskCreate(cli_task, CommandLineInterface, main_task.registers.eflags, (uint32_t*) main_task.registers.cr3);
   TaskSchedule(cli_task);
+  
 
   // For now, always reformat the disk first
   DiskFormat();
 
+  // RingTestUserMode();
   for (;;);
 }
 
@@ -146,11 +139,11 @@ static void CliHandleCommand() {
   } else {
     command_found = CliDetectMultiwordCommand();
   }
-
   if (!command_found) {
     PrintString("Command not recognized: ");
     PrintString(command_buffer_);
     PrintString("\n");
+    for(;;);
   }
   command_size_ = 0;
   command_buffer_[command_size_] = 0;
@@ -160,7 +153,8 @@ static void CliHandleCommand() {
 static bool CliDetectMultiwordCommand() {
   struct StringTokenizer* tokenizer = (struct StringTokenizer*) kmalloc(sizeof(struct StringTokenizer));
   memset(tokenizer, 0, sizeof(struct StringTokenizer));
-  char* token = (char*) kmalloc(sizeof(4096));
+
+  char* token = (char*) kmalloc(4096);
   memset(token, 0, 4096);
 
   bool command_found = 1;
@@ -215,6 +209,7 @@ static bool CliDetectMultiwordCommand() {
 
 static void CliHandleWriteFile(struct StringTokenizer* tokenizer) {
   char* filename = (char*) kmalloc(4096);
+  memset(filename, 0, 4096);
   if (!StringTokenizer_GetNext(tokenizer, filename)) {
     PrintString("Error: write: file name not supplied.\n");
     goto CleanupInitialCheck;
@@ -231,6 +226,7 @@ static void CliHandleWriteFile(struct StringTokenizer* tokenizer) {
   char c = tokenizer->delim;
   StringTokenizer_SetDelimiter(tokenizer, 0);
   char* data = (char*) kmalloc(4096);
+  memset(data, 0, 4096);
   if (!StringTokenizer_GetNext(tokenizer, data)) {
     PrintString("Error: write: no input supplied.\n");
     goto CleanupWritePhase;
@@ -254,6 +250,7 @@ CleanupInitialCheck:
 
 static void CliHandleReadFile(struct StringTokenizer* tokenizer) {
   char* filename = (char*) kmalloc(4096);
+  memset(filename, 0, 4096);
   if (!StringTokenizer_GetNext(tokenizer, filename)) {
     PrintString("Error: read: file name not supplied.\n");
     goto CleanupInitialCheck;
@@ -268,13 +265,14 @@ static void CliHandleReadFile(struct StringTokenizer* tokenizer) {
   }
 
   char* data = (char*) kmalloc(4096);
-  int written_len = ReadFile(file, data, strlen(data));
-  PrintInt(written_len);
+  memset(data, 0, 4096);
+  int read_len = ReadFile(file, data, 4096);
+  PrintInt(read_len);
   PrintString(" bytes is read from ");
   PrintString(filename);
   PrintString("\n");
 
-  for (int i = 0; i < written_len; ++i) {
+  for (int i = 0; i < read_len; ++i) {
     PrintChar(data[i]);
   }
 

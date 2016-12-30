@@ -41,17 +41,19 @@ void TaskCreate(struct Task* task, void (*main)(), uint32_t flags, uint32_t* pag
   task->registers.esi = 0;
   task->registers.edi = 0;
   task->registers.eflags = flags;
-  task->registers.eip = (uint32_t) main;
+  task->registers.eip = (uint32_t) main;  
   // Allocate kernel stack.
   // TODO: when user process is implemented, TSS will be used
   // to lead esp0 and ss0, so esp and ebp below should be set
   // to user stack instead.
-  task->registers.esp = ((uint32_t) kmalloc(4096)) + 0x9ff;
+  char* kernel_stack_page = (char*) kmalloc(4096);
+  memset((char*)kernel_stack_page, 0, 4096);
+
+  task->registers.esp = ((uint32_t)kernel_stack_page)+0x1000;
   task->registers.ebp = task->registers.esp;
   
   task->registers.cr3 = (uint32_t) page_directory;
   task->next = 0;
-
   // Push an IRET and PUSHAD frame
   TaskCreateIretAndPushadFrame(task);
 }
@@ -64,9 +66,8 @@ static void TaskCreateIretAndPushadFrame(struct Task* task) {
   // Push SS, ESP, EFLAGS, CS, EIP, then PUSHAD
   // For now, we create processes at ring 0 only: SS = 0x10, CS = 0x08
   // ESP is set
-  task->registers.esp -= 13; // Allocate spaces for IRET and PUSHAD
+  task->registers.esp -= 13*4; // Allocate spaces for IRET and PUSHAD
   uint32_t* esp = (uint32_t*) task->registers.esp;
-
   // PUSHAD frame
   *esp = task->registers.edi;
   *(esp+1) = task->registers.esi;
@@ -95,9 +96,9 @@ struct Task* TaskGetNext(struct Task* task) {
 
 void TaskSchedule(struct Task* task) {
   __asm__("cli");
-  struct Task* next_task = main_task.next;
+  struct Task* next_task = running_task->next;
   task->next = next_task;
-  main_task.next = task;
+  running_task->next = task;
   __asm__("sti");
 }
 

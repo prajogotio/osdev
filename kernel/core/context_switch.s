@@ -38,6 +38,7 @@ TaskContextSwitch:
 
   ; Load the new page directory
   mov ebx, [eax+40]
+
   mov cr3, ebx
 
   ; Writing to cr3 will flush the TLB

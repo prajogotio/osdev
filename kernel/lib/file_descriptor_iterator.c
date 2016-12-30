@@ -3,10 +3,10 @@
 #include "core/string.h"
 
 void FileDescriptorIterator_Initialize(struct FileDescriptorIterator* iterator, char* buffer, logical_block_addr addr) {
-  memset(iterator, 1, sizeof(struct FileDescriptorIterator));
+  memset(iterator, 0, sizeof(struct FileDescriptorIterator));
   iterator->buffer = buffer;
   iterator->cursor = 0;
-  iterator->current_buffer_lba = addr;
+  iterator->current_buffer_lba = addr;  
   AtaPioReadFromDisk(ATA_PIO_MASTER, addr, 8, iterator->buffer);
 }
 

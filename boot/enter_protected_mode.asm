@@ -122,6 +122,15 @@ ProtectedMode:
   ; Set address of memory info table to ebx
   mov ebx, kernel_memory_table
 
+  mov ax, 0x10
+  mov es, ax
+  mov ds, ax
+  mov fs, ax
+  mov gs, ax
+
+  mov esp, 0xc0090000
+  mov ebp, esp
+  
   jmp 0x8:KERNEL_PROTECTED_BASE
 
 

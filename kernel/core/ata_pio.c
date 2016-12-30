@@ -46,20 +46,13 @@ static void AtaPioIrqPrimary() {
 
 static void AtaPioIrqHandleRead() {
   while (!(ReadFromIoPort(ATA_PIO_CONTROLLER_PORT) & 0x8));
-  __asm__("cld");   // REP INSW set to auto increment.
-  __asm__("movl %0, %%edi" : : "r" (current_read_buffer_pointer_));
-  // Specify port on which the data string will be read.
-  __asm__("movl %0, %%edx" : : "i" (ATA_PIO_DATA_PORT));
-  // Repeat 256 times (1 sector at a time)
-  __asm__("movl $256, %ecx");
-  __asm__("rep insw");  
+  AtaPioRead(current_read_buffer_pointer_);
   // Advance buffer pointer by 512 bytes.
   current_read_buffer_pointer_ += 512;
   --number_of_sectors_to_process_;
 
   // Allow for 400ns delay to allow the controller to update its status.
   AtaPioDelay400ns();
-
   // Read error port
   ReadFromIoPort(ATA_PIO_ERROR_PORT);
 
@@ -113,7 +106,6 @@ void AtaPioInitialize() {
 
 void AtaPioReadFromDisk(uint8_t ata_pio_target, uint32_t lba_28bit, uint8_t num_of_sectors, char* read_buffer) {
   while (!AtaPioLock());
-
   while (ReadFromIoPort(ATA_PIO_CONTROLLER_PORT) & 0x80);
   while (!(ReadFromIoPort(ATA_PIO_CONTROLLER_PORT) & 0x40));
 
@@ -138,9 +130,10 @@ void AtaPioReadFromDisk(uint8_t ata_pio_target, uint32_t lba_28bit, uint8_t num_
   AtaPioDelay400ns();
 
   // Blocking implementation
-  while (!current_read_done_) {
+  while (!current_read_done_) {    
     AtaPioIrqHandleRead();
   }
+
 }
 
 void AtaPioWriteToDisk(uint8_t ata_pio_target, uint32_t lba_28bit, uint8_t num_of_sectors, char* write_buffer) {
