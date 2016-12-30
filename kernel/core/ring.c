@@ -6,6 +6,8 @@
 #include "kmalloc.h"
 
 static struct TssEntry tss;
+static char* RingTestPageMappingHelper(virtual_addr addr, struct pdirectory* user_directory);
+static void RingTestUserFunction();
 
 void TssFlush(uint16_t tss_selector) {
   __asm__("ltr %%ax" : : "a"(tss_selector));
@@ -21,7 +23,7 @@ void TssInstall(uint32_t index, uint16_t kernel_segment_selector, uint16_t kerne
   tss.ss0 = kernel_segment_selector;
   tss.esp0 = kernel_esp;
 
-  TssFlush(index * sizeof(struct GdtDescriptor));
+  TssFlush(0x2b);
 }
 
 
@@ -31,6 +33,62 @@ void RingTestUserMode() {
   // which means we have memory leak. Let's not care about this
   // right now as we are just testing how to enter user mode)
   uint32_t kernel_esp = (uint32_t) kmalloc(4096);
+  memset((char*) kernel_esp, 0, 4096);
 
-  // Create a new page directory
+  TssInstall(5, 0x10, kernel_esp);
+  
+  // // User page directory
+  struct pdirectory* user_directory = (struct pdirectory*) kmalloc(4096);
+  memset((char*) user_directory, 0, 4096);
+
+  uint32_t directory_physical_addr = (uint32_t) VmmGetPhysicalAddress(user_directory);
+  // // Recursive mapping
+  page_directory_entry* self_entry = (page_directory_entry*) VmmPdirectoryLookupEntry(user_directory, 0xFFC00000);
+  PdeAddAttribute(self_entry, PDE_PRESENT);
+  PdeAddAttribute(self_entry, PDE_WRITABLE);
+  PdeSetFrame(self_entry, directory_physical_addr);
+
+  // Kernel space mapping
+  // We can just copy the page directory entries of the kernel
+  // page directory from 0xc00 onwards to just before 0xffc
+  for (int i = 768; i < 1023; ++i) {
+    uint32_t vd = ((uint32_t) i) * 0x400000;
+    page_directory_entry* kernel_pdir_entry = VmmPdirectoryLookupEntry(VmmGetCurrentPageDirectory(), vd);
+    if (!(*(uint32_t*)kernel_pdir_entry & 1)) continue;
+    page_directory_entry* user_pdir_entry = VmmPdirectoryLookupEntry(user_directory, vd);
+    memcpy((char*) kernel_pdir_entry, (char*) user_pdir_entry, 4);
+  }
+
+
+  // Set user esp to 0x20000000
+  uint32_t user_esp = 0x20000000;
+  char* user_stack_segment = RingTestPageMappingHelper(user_esp, user_directory);
+
+  uint32_t user_code = 0x00000000;
+  char* user_code_segment = RingTestPageMappingHelper(user_code, user_directory);
+  
+  memcpy((char*) RingTestUserFunction, user_code_segment, 4096);
+
+  RingEnterUserMode((uint32_t) VmmGetPhysicalAddress(user_directory), (uint32_t)(user_esp+0x1000));
+}
+
+
+static char* RingTestPageMappingHelper(virtual_addr addr, struct pdirectory* user_directory) {
+  char* user_segment = (char*) kmalloc(4096);
+  memset((char*)user_segment, 0xfe, 4096);
+  page_directory_entry* user_dir_entry = (page_directory_entry*) VmmPdirectoryLookupEntry(user_directory, addr);
+  void* user_pt = (void*) kmalloc(4096);
+  memset((char*)user_pt, 0x0, 4096);
+  PdeSetFrame(user_dir_entry, (uint32_t) VmmGetPhysicalAddress(user_pt));
+  PdeAddAttribute(user_dir_entry, PDE_PRESENT);
+  PdeAddAttribute(user_dir_entry, PDE_WRITABLE);
+  void* user_pte = (void*) VmmPtableLookupEntry(user_pt, addr);
+  PteSetFrame(user_pte, (uint32_t) VmmGetPhysicalAddress(user_segment));
+  PteAddAttribute(user_pte, PTE_PRESENT);
+  return user_segment;
+}
+
+static void RingTestUserFunction() {
+  // We are in user mode, looping!
+  for (;;);
 }

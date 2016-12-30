@@ -31,7 +31,8 @@ void FileSystemInitialize() {
   buffer_page_ = (char*) kmalloc(4096);
   memset(buffer_page_, 0, 4096);
   // Allocate a reusable iterator
-  struct FileDescriptorIterator* iterator_ = (struct FileDescriptorIterator*) kmalloc(sizeof(struct FileDescriptorIterator));
+  iterator_ = (struct FileDescriptorIterator*) kmalloc(sizeof(struct FileDescriptorIterator));
+  memset(iterator_, 0, sizeof (struct FileDescriptorIterator));
   DiskInitialize();
 }
 

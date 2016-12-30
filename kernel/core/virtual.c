@@ -12,7 +12,6 @@ static virtual_addr pagefault_address_ = 0;
 static void VmmPtableClear(struct ptable* table);
 static void VmmTest();
 static void PagefaultHandler();
-static struct ptable* VmmGetPageTablePointer(virtual_addr virtual);
 
 bool VmmAllocatePage(pagetable_entry* e) {
   void* frame_addr = MmapAllocateBlocks(1);
@@ -86,7 +85,7 @@ void VmmMapPage(void* physical, void* virtual) {
   PteAddAttribute(page, PTE_PRESENT);
 }
 
-static struct ptable* VmmGetPageTablePointer(virtual_addr virtual) {
+struct ptable* VmmGetPageTablePointer(virtual_addr virtual) {
   // Compute index to directory table
   uint32_t index = PAGE_DIRECTORY_INDEX(virtual);
   // Create the address usable for recursive ptable mapping address resolution
@@ -94,26 +93,13 @@ static struct ptable* VmmGetPageTablePointer(virtual_addr virtual) {
 }
 
 void VmmInitialize() {
-  // Allocate default page table
-  struct ptable* table_default = (struct ptable*) MmapAllocateBlocks(1);
-  if (!table_default) return;
   // Allocate 3GB page table
   struct ptable* table_3gb = (struct ptable*) MmapAllocateBlocks(1);
   if (!table_3gb) return;
-
-  VmmPtableClear(table_default);
   VmmPtableClear(table_3gb);
 
-  // first 4mb are identity map
-  for (int i = 0, frame=0x0, virt=0x00000000; i<1024; ++i, frame+=4096, virt+=4096) {
-    pagetable_entry page = 0;
-    PteAddAttribute(&page, PTE_PRESENT);
-    PteSetFrame(&page, frame);
-    *VmmPtableLookupEntry(table_default, virt) = page;
-  }
-
-  // map 1mb physical to 3gb virtual
-  for (int i = 0, frame=0x100000, virt=0xc0000000; i<1024;i++, frame+=4096, virt+=4096) {
+  // map 0x00000000 physical to 3gb virtual
+  for (int i = 0, frame=0x000000, virt=0xc0000000; i<1024;i++, frame+=4096, virt+=4096) {
     pagetable_entry page=0;
     PteAddAttribute(&page, PTE_PRESENT);
     PteSetFrame(&page, frame);
@@ -129,11 +115,6 @@ void VmmInitialize() {
   PdeAddAttribute(entry_3gb, PDE_WRITABLE);
   PdeSetFrame(entry_3gb, (physical_addr) table_3gb);
 
-  page_directory_entry* entry_default = VmmPdirectoryLookupEntry(directory, 0x00000000);
-  PdeAddAttribute(entry_default, PDE_PRESENT);
-  PdeAddAttribute(entry_default, PDE_WRITABLE);
-  PdeSetFrame(entry_default, (physical_addr) table_default);
-
   // Recursive mapping for page-table address resolution. 
   // Set the last entry in directory table to point to the directory table itself.
   page_directory_entry* recursive_mapping = VmmPdirectoryLookupEntry(directory, 0xFFC00000);
@@ -144,11 +125,15 @@ void VmmInitialize() {
 
   // Enable paging.
   cur_pdbr_ = (physical_addr) directory;
-  VmmSwitchPdirectory(directory);
+  // Correct the directory address so it can be reached when paging is enabled.
+  // Assumption: directory is allocated at lower 4MB physical memory
+  VmmSwitchPdirectory((struct pdirectory*) ((uint32_t) directory | 0xc0000000));
   PmmEnablePaging(1);
+
 
   // Pagefault interrupt
   SetInterruptVector(14, PagefaultHandler);
+
   // VmmTest();
 }
 
@@ -165,6 +150,8 @@ static void PagefaultHandler() {
   PrintString("Page fault address: ");
   PrintHex(pagefault_address_);
   PrintString("\n");
+
+  __asm__("hlt");
 
   // Only handle the case where page fault is caused by a new virtual address
   // being assigned a physical address for the first time.
@@ -262,4 +249,23 @@ void* VmmGetPhysicalAddress(void* virtual) {
   // virtual & 0xfff computes the 12 bit offset into page block.
   addr |= ((virtual_addr) virtual) & 0xfff;
   return (void*) addr;
+}
+
+void* VmmGetCurrentPageDirectory() {
+  return current_directory_;
+}
+
+
+void VmmMapIfNotPresent(virtual_addr virt) {
+  struct page_directory_entry* dir_entry = (struct page_directory_entry*) VmmPdirectoryLookupEntry(current_directory_, virt);
+  int is_mapped = (*(uint32_t*)dir_entry) & PDE_PRESENT;
+  if (is_mapped) {
+    struct ptable* table = (struct ptable*) VmmGetPageTablePointer((virtual_addr) virt);
+    struct pagetable_entry* pt_entry = (struct pagetable_entry*) VmmPtableLookupEntry(table, virt);
+    is_mapped = (*(uint32_t*)pt_entry) & PTE_PRESENT;
+  }
+  if (!is_mapped) {
+    physical_addr phys = (physical_addr) MmapAllocateBlocks(1);
+    VmmMapPage((void*)phys, (void*)virt);
+  }
 }

@@ -36,6 +36,8 @@ extern void VmmFlushTlbEntry(virtual_addr addr);
 extern void VmmMapPage(void* physical, void* virtual);
 extern void* VmmGetPhysicalAddress(void* virtual);
 extern void VmmInitialize();
-
+extern void* VmmGetCurrentPageDirectory();
+extern struct ptable* VmmGetPageTablePointer(virtual_addr virtual);
+extern void VmmMapIfNotPresent(virtual_addr addr);
 
 #endif  //__TIO_OS_VIRTUAL_H__

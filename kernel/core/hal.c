@@ -28,11 +28,10 @@ int HalInitialize() {
   InitializePit();
   PitStartCounter(100, PIT_OCW_COUNTER_0, PIT_OCW_MODE_SQUAREWAVEGEN);
   InitializeMemoryManagement();
-  InitializeKeyboard();
+  InitializeKeyboard();  
   InitializeDiskManager();
   KmallocInitialize();
   FileSystemInitialize();
-
   // Enable interrupt before calling TaskInitialize so we can set the correct
   // flags for main task.
   __asm__("sti");
@@ -132,9 +131,7 @@ static void InitializeMemoryManagement() {
   // Also protect our DATA/BSS section and Mmap table
   // Since we map 3gb virtual 0x00100000 physical, use that physical base
   MmapDeinitializeRegion(0x00100000, kernel_size + 4096 + BSS_SECTOR);
-  // Protect stack (located at 0x00090000) and grows downward
-  MmapDeinitializeRegion(0x00080000, 0x00010fff);
-
+  MmapDeinitializeRegion(0x00290000, 0x10000);
   // Protect the first block of memory.
   MmapDeinitializeRegion(0, 4096);
 

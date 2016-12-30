@@ -26,6 +26,7 @@ static void KmallocTest();
 void KmallocInitialize() {
   // 0xf0000000 points to head of allocated_list
   allocated_list_head_ = (struct KmallocNode*) KMALLOC_BASE_ADDR;
+  VmmMapIfNotPresent(KMALLOC_BASE_ADDR);  
   memset(allocated_list_head_, 0, size_of_node_);
 
   // It is an empty list
@@ -171,6 +172,7 @@ void* kmalloc(size_t size) {
     next_ptr->prev = prev_ptr;
     KmallocAddToFreePointer(ptr);
   }
+  VmmMapIfNotPresent((uint32_t) ret_addr);
   return ret_addr;
 }
 

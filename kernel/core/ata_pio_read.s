@@ -3,8 +3,8 @@ extern PrintString
 extern PrintHex
 
 section .text
-global AtaPioRead
-AtaPioRead:
+global AtaPioReadOneSector
+AtaPioReadOneSector:
   push ebp
   mov ebp, esp
   pushad

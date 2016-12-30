@@ -13,6 +13,7 @@ LIB_OBJS = $(patsubst %,kernel/lib/%.o,$(_LIB_MODULE))
 
 all: boot hello_world
 	cat bootloader.bin enter_protected_mode.bin kernel/hello_world.bin > tio_os.img
+	qemu-img resize tio_os.img +32M
 
 .PHONY: boot
 boot: boot/enter_protected_mode.asm boot/bootloader.asm
@@ -41,5 +42,4 @@ clean:
 	rm $(CORE_OBJS) $(LIB_OBJS) kernel/*.o kernel/*.bin *.bin *.img
 
 run:
-	qemu-img resize tio_os.img +32M
 	qemu-system-x86_64 -d guest_errors -hda tio_os.img -m 256

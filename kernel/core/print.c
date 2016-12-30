@@ -3,7 +3,7 @@
 
 #define SCREEN_WIDTH 80
 #define SCREEN_HEIGHT 25
-#define VIDEO_MEMORY 0xB8000
+#define VIDEO_MEMORY 0xC00B8000
 
 static int cursorX_ = 0;
 static int cursorY_ = 0;

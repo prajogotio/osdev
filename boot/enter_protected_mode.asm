@@ -4,7 +4,7 @@ org 0x500
 
 jmp main
 
-%define KERNEL_PROTECTED_BASE 0xc0000000
+%define KERNEL_PROTECTED_BASE 0xc0100000
 
 %include "boot/inc/stdio.inc"
 %include "boot/inc/install_gdt.inc"
@@ -103,13 +103,13 @@ ProtectedMode:
   ; Install temporary page directory and paging (identity mapping and 3GB virtual to 0x00100000 mapping)
   call EnablePaging
 
-  ; Load kernel to 0xc0000000 virtual (which is 0x00100000 physical)
+  ; Load kernel to KERNEL_PROTECTED_BASE virtual (which is 0x00100000 physical)
   ; Load up to 255 sectors first
   ; Kernel image starts at 5-th sector on disk.
   ; Hence LBA = 4 (LBA stands for logical block addressing, each block is 512 bytes)
   mov cl, KERNEL_SECTORS
   mov eax, KERNEL_START_SECTOR
-  mov edi, 0xc0000000
+  mov edi, KERNEL_PROTECTED_BASE
   call AtaPioLbaRead
 
   mov ebx, KernelLoadedMsg
@@ -128,7 +128,7 @@ ProtectedMode:
   mov fs, ax
   mov gs, ax
 
-  mov esp, 0xc0090000
+  mov esp, 0xc0300000
   mov ebp, esp
   
   jmp 0x8:KERNEL_PROTECTED_BASE

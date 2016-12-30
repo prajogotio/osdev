@@ -24,15 +24,13 @@ static void CliHandleReadFile(struct StringTokenizer* tokenizer);
 
 void kernel_main() {
   __asm__("movl %%ebx, %0" : "=r"(Hal_memory_information));
-  ClearScreen();
-  PrintString("Initializing HAL...\n");
   HalInitialize();
-
+  ClearScreen();
+  
   struct Task* timer_task = (struct Task*) kmalloc(sizeof(struct Task));
   memset(timer_task, 0, sizeof(struct Task));
   TaskCreate(timer_task, TimeDisplayer, main_task.registers.eflags, (uint32_t*) main_task.registers.cr3);  
   TaskSchedule(timer_task);
-
 
   struct Task* banner_task = (struct Task*) kmalloc(sizeof(struct Task));
   memset(banner_task, 0, sizeof(struct Task));
@@ -41,17 +39,14 @@ void kernel_main() {
 
   struct Task* cli_task = (struct Task*) kmalloc(sizeof(struct Task));
   memset(cli_task, 0, sizeof(struct Task));
-  PrintHex(cli_task);
-
   TaskCreate(cli_task, CommandLineInterface, main_task.registers.eflags, (uint32_t*) main_task.registers.cr3);
   TaskSchedule(cli_task);
-  
 
   // For now, always reformat the disk first
   DiskFormat();
+  //RingTestUserMode();
 
-  // RingTestUserMode();
-  for (;;);
+  for(;;);
 }
 
 static void TioOsMarquee() {

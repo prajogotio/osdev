@@ -1,4 +1,6 @@
 [bits 32]
+extern PrintHex
+extern VmmGetPhysicalAddress
 
 section .text
 global RingEnterUserMode
@@ -20,6 +22,7 @@ RingEnterUserMode:
   mov fs, ax
   mov gs, ax
 
+
   ; load new page directory
   mov eax, [ebx + 4]
   mov cr3, eax
@@ -30,9 +33,7 @@ RingEnterUserMode:
   push dword 0x1b           ; CS for user space is 0x18,
                             ; RPL is 0x3 (ring 3)
                             ; so 0x18 + 0x3 = 0x1b.
-  push dword .user_space    ; When IRET is called, we will jump
-                            ; to 0x1b : .user_space.
-  iretd
+  push 0x00400000           ; When IRET is called, we will jump
+                            ; to 0x1b : 0x00000000
 
-.user_space:
-  ; We are now at user space!
+  iretd

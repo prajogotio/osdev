@@ -3,6 +3,7 @@
 #include "print.h"
 #include "kmalloc.h"
 #include "pit.h"
+#include "string.h"
 
 // Both processes are kernel processes, so they share VAS
 // Context switch happens in the kernel space
@@ -10,6 +11,7 @@
 
 static struct Task* running_task;
 struct Task main_task;
+static int is_initialized_ = 0;
 static void TaskCreateIretAndPushadFrame(struct Task* task);
 
 
@@ -29,6 +31,7 @@ void TaskInitialize() {
 
   main_task.next = &main_task;
   running_task = &main_task;
+  is_initialized_ = 1;
 }
 
 void TaskCreate(struct Task* task, void (*main)(), uint32_t flags, uint32_t* page_directory) {
@@ -103,7 +106,7 @@ void TaskSchedule(struct Task* task) {
 }
 
 bool TaskShouldSchedule() {
-  return 1;
+  return is_initialized_;
 }
 
 

@@ -20,10 +20,10 @@ EnablePaging:
   add ebx, 4096               ; next frame address (each frame is 4096)
   loop .loop
 
-; Map kernel to 3GB virtual address. i.e. map physical 0x00100000
+; Map kernel to 3GB virtual address. i.e. map physical 0x00000000
 ; to virtual 0xc0000000
   mov eax, PAGE_TABLE_768
-  mov ebx, 0x00100000 | PRIV
+  mov ebx, 0x00000000 | PRIV
   mov ecx, PAGE_TABLE_ENTRIES
 .loop2:
   mov dword [eax], ebx

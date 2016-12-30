@@ -46,7 +46,7 @@ static void AtaPioIrqPrimary() {
 
 static void AtaPioIrqHandleRead() {
   while (!(ReadFromIoPort(ATA_PIO_CONTROLLER_PORT) & 0x8));
-  AtaPioRead(current_read_buffer_pointer_);
+  AtaPioReadOneSector((uint32_t) current_read_buffer_pointer_);
   // Advance buffer pointer by 512 bytes.
   current_read_buffer_pointer_ += 512;
   --number_of_sectors_to_process_;
