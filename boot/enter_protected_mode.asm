@@ -128,7 +128,7 @@ ProtectedMode:
   mov fs, ax
   mov gs, ax
 
-  mov esp, 0xc0300000
+  mov esp, 0xc0090000
   mov ebp, esp
   
   jmp 0x8:KERNEL_PROTECTED_BASE

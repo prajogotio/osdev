@@ -43,10 +43,11 @@ inline page_directory_entry* VmmPdirectoryLookupEntry(struct pdirectory* p, virt
   return 0;
 }
 
-inline bool VmmSwitchPdirectory(struct pdirectory* directory) {
+inline bool VmmSwitchPdirectory(struct pdirectory* directory, uint32_t pdbr) {
   if (!directory) return 0;
   current_directory_ = directory;
-  PmmLoadPdbr(cur_pdbr_);
+  cur_pdbr_ = pdbr;
+  PmmLoadPdbr(pdbr);
   return 1;
 }
 
@@ -98,6 +99,7 @@ void VmmInitialize() {
   if (!table_3gb) return;
   VmmPtableClear(table_3gb);
 
+
   // map 0x00000000 physical to 3gb virtual
   for (int i = 0, frame=0x000000, virt=0xc0000000; i<1024;i++, frame+=4096, virt+=4096) {
     pagetable_entry page=0;
@@ -122,12 +124,10 @@ void VmmInitialize() {
   PdeAddAttribute(recursive_mapping, PDE_WRITABLE);
   PdeSetFrame(recursive_mapping, (physical_addr) directory);
 
-
   // Enable paging.
-  cur_pdbr_ = (physical_addr) directory;
   // Correct the directory address so it can be reached when paging is enabled.
   // Assumption: directory is allocated at lower 4MB physical memory
-  VmmSwitchPdirectory((struct pdirectory*) ((uint32_t) directory | 0xc0000000));
+  VmmSwitchPdirectory((struct pdirectory*) ((uint32_t) directory | 0xc0000000), (physical_addr) directory);
   PmmEnablePaging(1);
 
 

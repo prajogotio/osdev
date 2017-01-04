@@ -1,4 +1,5 @@
 #include "gdt.h"
+#include "ring.h"
 #include "stdint.h"
 
 struct __attribute__ ((packed)) GdtRegister {

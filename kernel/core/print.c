@@ -113,7 +113,6 @@ void PrintString(char* str) {
     ++str;
   }
 }
-
 void PrintHex(unsigned int val) {
   char hex[9] = "00000000";
   for (int i = 0; i < 8; ++i) {
@@ -129,6 +128,7 @@ void PrintHex(unsigned int val) {
   }
   PrintString("0x");
   PrintString(hex);
+ 
 }
 
 void MoveCursor(unsigned int x, unsigned int y) {

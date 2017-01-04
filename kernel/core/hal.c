@@ -131,7 +131,7 @@ static void InitializeMemoryManagement() {
   // Also protect our DATA/BSS section and Mmap table
   // Since we map 3gb virtual 0x00100000 physical, use that physical base
   MmapDeinitializeRegion(0x00100000, kernel_size + 4096 + BSS_SECTOR);
-  MmapDeinitializeRegion(0x00290000, 0x10000);
+  MmapDeinitializeRegion(0x00080000, 0x10000);
   // Protect the first block of memory.
   MmapDeinitializeRegion(0, 4096);
 

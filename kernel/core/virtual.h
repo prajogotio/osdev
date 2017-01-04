@@ -31,7 +31,7 @@ extern bool VmmAllocatePage(pagetable_entry* e);
 extern bool VmmFreePage(pagetable_entry* e);
 extern pagetable_entry* VmmPtableLookupEntry(struct ptable* p, virtual_addr addr);
 extern page_directory_entry* VmmPdirectoryLookupEntry(struct pdirectory* p, virtual_addr addr);
-extern bool VmmSwitchPdirectory(struct pdirectory* directory);
+extern bool VmmSwitchPdirectory(struct pdirectory* directory, uint32_t pdbr);
 extern void VmmFlushTlbEntry(virtual_addr addr);
 extern void VmmMapPage(void* physical, void* virtual);
 extern void* VmmGetPhysicalAddress(void* virtual);

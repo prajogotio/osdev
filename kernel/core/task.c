@@ -106,7 +106,7 @@ void TaskSchedule(struct Task* task) {
 }
 
 bool TaskShouldSchedule() {
-  return is_initialized_;
+  return is_initialized_ & 1;
 }
 
 

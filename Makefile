@@ -43,3 +43,6 @@ clean:
 
 run:
 	qemu-system-x86_64 -d guest_errors -hda tio_os.img -m 256
+
+debug:
+	qemu-system-x86_64 -d int -hda tio_os.img -m 256

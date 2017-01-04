@@ -26,7 +26,7 @@ void kernel_main() {
   __asm__("movl %%ebx, %0" : "=r"(Hal_memory_information));
   HalInitialize();
   ClearScreen();
-  
+
   struct Task* timer_task = (struct Task*) kmalloc(sizeof(struct Task));
   memset(timer_task, 0, sizeof(struct Task));
   TaskCreate(timer_task, TimeDisplayer, main_task.registers.eflags, (uint32_t*) main_task.registers.cr3);  
@@ -44,7 +44,7 @@ void kernel_main() {
 
   // For now, always reformat the disk first
   DiskFormat();
-  //RingTestUserMode();
+  // RingTestUserMode();
 
   for(;;);
 }
@@ -138,7 +138,6 @@ static void CliHandleCommand() {
     PrintString("Command not recognized: ");
     PrintString(command_buffer_);
     PrintString("\n");
-    for(;;);
   }
   command_size_ = 0;
   command_buffer_[command_size_] = 0;
