@@ -5,6 +5,8 @@
 #include "pit.h"
 #include "string.h"
 
+#define ENABLE_TASKING 1
+
 // Both processes are kernel processes, so they share VAS
 // Context switch happens in the kernel space
 // TODO: User mode? (Ring jumps)
@@ -106,7 +108,7 @@ void TaskSchedule(struct Task* task) {
 }
 
 bool TaskShouldSchedule() {
-  return is_initialized_ & 1;
+  return is_initialized_ & ENABLE_TASKING;
 }
 
 

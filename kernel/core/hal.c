@@ -9,6 +9,7 @@
 #include "kmalloc.h"
 #include "file_system.h"
 #include "task.h"
+#include "syscall.h"
 
 #define BSS_SECTOR 4096*10
 
@@ -36,6 +37,7 @@ int HalInitialize() {
   // flags for main task.
   __asm__("sti");
   TaskInitialize();
+  SyscallInitialize();
   PrintString("HAL Initialized!\n");
   return 0;
 }
@@ -63,6 +65,10 @@ void InterruptDone(unsigned intno) {
 
 void SetInterruptVector(int intno, IRQ_HANDLER handler) {
   InstallInterruptHandler(intno, IDT_DESC_PRESENT|IDT_DESC_BIT32, 0x8, handler);
+}
+
+extern void SetUserInterruptVector(int intno, void(*fn)()) {
+  InstallInterruptHandler(intno, IDT_DESC_PRESENT|IDT_DESC_BIT32|IDT_DESC_RING3, 0x8, fn);
 }
 
 static void InitializeMemoryManagement() {

@@ -95,5 +95,13 @@ static char* RingTestPageMappingHelper(virtual_addr addr, struct pdirectory* use
 
 void RingTestUserFunction() {
   // We are in user mode, looping!
+  for (int i = 0; i < 10; ++i) {
+    if (i % 2) {
+      __asm__("movl $0, %eax");
+    } else {
+      __asm__("movl $1, %eax");
+    }
+    __asm__("int $0x80");
+  }
   for (;;);
 }
