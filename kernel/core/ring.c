@@ -7,7 +7,6 @@
 #include "print.h"
 
 static struct TssEntry tss;
-static char* RingTestPageMappingHelper(virtual_addr addr, struct pdirectory* user_directory);
 
 void TssFlush() {
   __asm__("mov $0x2b, %ax\n\t"
@@ -15,7 +14,6 @@ void TssFlush() {
 }
 
 void TssInstall(uint32_t index, uint16_t kernel_segment_selector, uint32_t kernel_esp) {
-
   uint32_t base = (uint32_t) &tss;
   GdtSetDescriptor(index, base, base + sizeof(struct TssEntry),
     GDT_DESC_ACCESS|GDT_DESC_EXEC_CODE|GDT_DESC_DPL|GDT_DESC_MEMORY,
@@ -26,6 +24,10 @@ void TssInstall(uint32_t index, uint16_t kernel_segment_selector, uint32_t kerne
   TssFlush();
 }
 
+void TssUpdateStack(uint32_t ss0, uint32_t esp0) {
+  tss.ss0 = ss0;
+  tss.esp0 = esp0;
+}
 
 void RingTestUserMode() {
   // Allocate a kernel stack for this user
@@ -38,7 +40,7 @@ void RingTestUserMode() {
   kernel_esp += 0x1000;
   TssInstall(5, 0x10, kernel_esp);
   
-  // // User page directory
+  // User page directory
   struct pdirectory* user_directory = (struct pdirectory*) kmalloc(4096);
   memset((char*) user_directory, 0, 4096);
 
@@ -74,8 +76,7 @@ void RingTestUserMode() {
   RingEnterUserMode((uint32_t) user_directory, (uint32_t) VmmGetPhysicalAddress(user_directory), (uint32_t)(user_esp+0x1000));
 }
 
-
-static char* RingTestPageMappingHelper(virtual_addr addr, struct pdirectory* user_directory) {
+char* RingTestPageMappingHelper(virtual_addr addr, struct pdirectory* user_directory) {
   char* user_segment = (char*) kmalloc(4096);
   memset((char*)user_segment, 0x0, 4096);
   page_directory_entry* user_dir_entry = (page_directory_entry*) VmmPdirectoryLookupEntry(user_directory, addr);
@@ -104,4 +105,28 @@ void RingTestUserFunction() {
     __asm__("int $0x80");
   }
   for (;;);
+}
+
+void RingInitializeUserDirectory(struct pdirectory** user_directory) {
+  // Allocate memory
+  *user_directory = (struct pdirectory*) kmalloc(4096);
+  memset((char*) *user_directory, 0, 4096);
+
+  uint32_t directory_physical_addr = (uint32_t) VmmGetPhysicalAddress(*user_directory);
+  // Recursive mapping
+  page_directory_entry* self_entry = (page_directory_entry*) VmmPdirectoryLookupEntry(*user_directory, 0xFFC00000);
+  PdeAddAttribute(self_entry, PDE_PRESENT);
+  PdeAddAttribute(self_entry, PDE_WRITABLE);
+  PdeSetFrame(self_entry, directory_physical_addr);
+
+  // Kernel space mapping
+  // We can just copy the page directory entries of the kernel
+  // page directory from 0xc00 onwards to just before 0xffc
+  for (int i = 768; i < 1023; ++i) {
+    uint32_t vd = ((uint32_t) i) * 0x400000;
+    page_directory_entry* kernel_pdir_entry = VmmPdirectoryLookupEntry(VmmGetCurrentPageDirectory(), vd);
+    if (!(*(uint32_t*)kernel_pdir_entry & 1)) continue;
+    page_directory_entry* user_pdir_entry = VmmPdirectoryLookupEntry(*user_directory, vd);
+    memcpy((char*) kernel_pdir_entry, (char*) user_pdir_entry, 4);
+  }
 }

@@ -3,6 +3,7 @@
 #include "core/hal.h"
 #include "core/kmalloc.h"
 #include "core/task.h"
+#include "core/ring.h"
 #include "lib/string_tokenizer.h"
 
 #define BUFFER_SIZE 4096
@@ -45,6 +46,11 @@ void kernel_main() {
   // For now, always reformat the disk first
   DiskFormat();
   // RingTestUserMode();
+  
+  struct Task* user_task = (struct Task*) kmalloc(sizeof(struct Task));
+  memset(user_task, 0, sizeof(struct Task));
+  TaskCreateUserProcess(user_task, RingTestUserFunction, main_task.registers.eflags);
+  TaskSchedule(user_task);
 
   for(;;);
 }

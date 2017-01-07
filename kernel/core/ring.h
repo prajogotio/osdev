@@ -2,6 +2,7 @@
 #define __TIO_OS_RING_H__
 
 #include "stdint.h"
+#include "virtual.h"
 
 struct __attribute__((packed)) TssEntry {
   uint32_t prev_tss, esp0, ss0;
@@ -9,7 +10,11 @@ struct __attribute__((packed)) TssEntry {
 };
 
 extern void TssFlush();
+extern void TssUpdateStack(uint32_t ss0, uint32_t esp0);
 extern void TssInstall(uint32_t index, uint16_t kernel_segment_selector, uint32_t kernel_esp);
+extern void RingInitializeUserDirectory(struct pdirectory** user_directory);
+extern char* RingTestPageMappingHelper(virtual_addr addr, struct pdirectory* user_directory);
+
 
 extern void RingEnterUserMode(uint32_t directory, uint32_t cr3, uint32_t esp);
 extern void RingTestUserMode();

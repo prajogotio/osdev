@@ -26,8 +26,8 @@ RingEnterUserMode:
   mov gs, ax
 
   ; load new page directory
-  push dword [ebx+8]
-  push dword [ebx+4]
+  push dword [ebx+8]    ; page directory addr (virtual)
+  push dword [ebx+4]    ; cr3
   call VmmSwitchPdirectory
   add esp, 8
 

@@ -27,6 +27,8 @@ struct pdirectory {
   page_directory_entry entries[PAGES_PER_DIRECTORY];
 };
 
+extern struct pdirectory* current_directory_;
+
 extern bool VmmAllocatePage(pagetable_entry* e);
 extern bool VmmFreePage(pagetable_entry* e);
 extern pagetable_entry* VmmPtableLookupEntry(struct ptable* p, virtual_addr addr);

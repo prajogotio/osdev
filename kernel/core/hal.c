@@ -10,6 +10,7 @@
 #include "file_system.h"
 #include "task.h"
 #include "syscall.h"
+#include "ring.h"
 
 #define BSS_SECTOR 4096*10
 
@@ -24,6 +25,8 @@ static void InitializeFileSystem();
 
 int HalInitialize() {
   InitializeGdt();
+  // Initialize a TSS entry (will be overwritten later on)
+  TssInstall(5, 0x10, 0xc0090000);
   InitializeIdt(0x8);
   InitializePic(0x20, 0x28);
   InitializePit();

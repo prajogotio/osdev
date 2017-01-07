@@ -3,7 +3,7 @@
 #include "print.h"
 #include "hal.h"
 
-static struct pdirectory* current_directory_ = 0;
+struct pdirectory* current_directory_ = 0;
 static physical_addr cur_pdbr_ = 0;
 
 static int error_code_ = 0;
