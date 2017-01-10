@@ -6,12 +6,12 @@
 #define MAX_SYSCALL 2
 
 
-static void SyscallTest();
-static void SyscallTestTwo();
+static void SyscallPrintString(uint32_t arg_addr);
+static void SyscallTest(uint32_t arg_addr);
 
-static void* syscall_vector_[] = {
+static void (*syscall_vector_[]) (uint32_t arg_addr) = {
+  SyscallPrintString,
   SyscallTest,
-  SyscallTestTwo
 };
 
 
@@ -19,13 +19,17 @@ static void* syscall_vector_[] = {
 void SyscallHandler() {
   __asm__("pusha");
   int syscall_index = -1;
+  uint32_t arg_addr = -1;
   __asm__("movl %%eax, %0": "=r"(syscall_index) :);
+  __asm__("movl %%ebx, %0": "=r"(arg_addr) :);
   if (syscall_index >= MAX_SYSCALL || syscall_index < 0) {
-    PrintString("Syscall Error: Index out of bound\n");
+    PrintString("Syscall Error: Index out of bound: ");
+    PrintInt(syscall_index);
+    PrintString("\n");
     for(;;);
   }
   void (*function_to_call)() = syscall_vector_[syscall_index];
-  function_to_call();
+  function_to_call(arg_addr);
   __asm__("popa");
   __asm__("leave");
   __asm__("iret");
@@ -35,10 +39,11 @@ void SyscallInitialize() {
   SetUserInterruptVector(0x80, SyscallHandler);
 }
 
-static void SyscallTest() {
-  PrintString("System call!\n");
+static void SyscallPrintString(uint32_t arg_addr) {
+  PrintString((char*)arg_addr);
+  PrintString("\n");
 }
 
-static void SyscallTestTwo() {
-  PrintString("Another system call!\n");
+static void SyscallTest(uint32_t arg_addr) {
+  PrintString("System call test!\n");
 }

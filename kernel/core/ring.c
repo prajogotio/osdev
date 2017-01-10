@@ -96,8 +96,10 @@ char* RingTestPageMappingHelper(virtual_addr addr, struct pdirectory* user_direc
 
 void RingTestUserFunction() {
   // We are in user mode, looping!
+  char *message = "Hello there!";
   for (int i = 0; i < 10; ++i) {
     if (i % 2) {
+      __asm__("movl %0, %%ebx": : "r"(message):);
       __asm__("movl $0, %eax");
     } else {
       __asm__("movl $1, %eax");
