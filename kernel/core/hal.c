@@ -11,6 +11,7 @@
 #include "task.h"
 #include "syscall.h"
 #include "ring.h"
+#include "page_replacement.h"
 
 #define BSS_SECTOR 4096*10
 
@@ -36,6 +37,7 @@ int HalInitialize() {
   InitializeDiskManager();
   KmallocInitialize();
   FileSystemInitialize();
+  PageReplacementInitialize();
   // Enable interrupt before calling TaskInitialize so we can set the correct
   // flags for main task.
   __asm__("sti");

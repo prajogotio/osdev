@@ -3,6 +3,7 @@
 #include "kmalloc.h"
 #include "math.h"
 #include "string.h"
+#include "page_replacement.h"
 
 // Approach used: bitmap allocation table
 // Location of allocation table: at LBA 5MB mark, i.e. 0x2800
@@ -78,6 +79,11 @@ extern void DiskFormat() {
   }
   // Allocate root at block 2000 (arbitrary choice, revise later when needed)
   DiskSetAllocationTableEntry(ROOT_DIR_BLOCK_ID);
+
+  // Reserve blocks for LRU paging (allocation is handled in memory)
+  for (int i = 0; i < PAGING_RESERVE_SIZE; ++i) {
+    DiskSetAllocationTableEntry(PAGING_RESERVE_START_BLOCK + i);
+  }
 
   InitializeMetadataBlock();
 }

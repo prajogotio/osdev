@@ -45,7 +45,6 @@ void kernel_main() {
 
   // For now, always reformat the disk first
   DiskFormat();
-  // RingTestUserMode();
   
   struct Task* user_task = (struct Task*) kmalloc(sizeof(struct Task));
   memset(user_task, 0, sizeof(struct Task));

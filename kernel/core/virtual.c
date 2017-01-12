@@ -2,6 +2,9 @@
 #include "string.h"
 #include "print.h"
 #include "hal.h"
+#include "page_replacement.h"
+
+#define DEBUG 0
 
 struct pdirectory* current_directory_ = 0;
 static physical_addr cur_pdbr_ = 0;
@@ -12,6 +15,7 @@ static virtual_addr pagefault_address_ = 0;
 static void VmmPtableClear(struct ptable* table);
 static void VmmTest();
 static void PagefaultHandler();
+static PageFaultWithReplacementTest();
 
 bool VmmAllocatePage(pagetable_entry* e) {
   void* frame_addr = MmapAllocateBlocks(1);
@@ -138,12 +142,12 @@ void VmmInitialize() {
 }
 
 static void PagefaultHandler() {
+  __asm__("pusha");
   // Error code should be placed right on top of ebp
   __asm__("movl 4(%%ebp), %0" : "=r"(error_code_):);
-  __asm__("pusha");
   __asm__("movl %%cr2, %0" : "=r"(pagefault_address_) :);
 
-  PrintString("*** Pagefault handling partially implemented. Pagefault information:\n");
+  PrintString("\n*** Pagefault handling partially implemented. Pagefault information:\n");
   PrintString("Error code: ");
   PrintHex(error_code_);
   PrintString("\n");
@@ -151,24 +155,35 @@ static void PagefaultHandler() {
   PrintHex(pagefault_address_);
   PrintString("\n");
 
-  __asm__("hlt");
+  if (DEBUG) {
+    // Testing: FIFO page replacement
+    PageFaultWithReplacementTest();
+  } else {
+    __asm__("hlt");
 
-  // Only handle the case where page fault is caused by a new virtual address
-  // being assigned a physical address for the first time.
-  // The case where virtual address is brought back from disk is not yet
-  // implemented.
-  physical_addr new_page = (physical_addr) MmapAllocateBlocks(1);
-  VmmMapPage((void*) new_page, (void*) (pagefault_address_ & ~0xfff));
+     // Only handle the case where page fault is caused by a new virtual address
+    // being assigned a physical address for the first time.
+    // The case where virtual address is brought back from disk is not yet
+    // implemented.
+    physical_addr new_page = (physical_addr) MmapAllocateBlocks(1);
+    VmmMapPage((void*) new_page, (void*) (pagefault_address_ & ~0xfff));
 
-  PrintString("Physical Addr: ");
-  PrintHex(new_page);
-  PrintString("\n");
+    PrintString("Physical Addr: ");
+    PrintHex(new_page);
+    PrintString("\n");
+  }
 
   __asm__("popa");
   __asm__("leave");
   // Pop error_code off the stack
   __asm__("addl $4, %esp");
   __asm__("iret");
+}
+
+static PageFaultWithReplacementTest() {
+  struct PageInfo* victim = current_working_set->page_in_memory->prev;
+  PageSwap(victim->virtual_address, pagefault_address_ & ~0xfff);
+  PrintString("Page fault handled!\n");
 }
 
 static void VmmTest() {
