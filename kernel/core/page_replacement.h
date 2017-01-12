@@ -6,7 +6,9 @@
 #define PAGING_RESERVE_START_BLOCK        2048    // Reserved for LRU paging
 #define PAGING_RESERVE_SIZE               256     // 256 pages
 
-#define PAGE_EVICTABLE 1
+#define PAGE_EVICTABLE                         1
+// Maximum number of pages user can have on RAM at once.
+#define MAX_USER_PHYSICAL_PAGE_ALLOCATION      4
 
 struct PageInfo {
   uint32_t virtual_address;
@@ -19,18 +21,18 @@ struct PageInfo {
 struct WorkingSet {
   struct PageInfo *page_evicted;
   struct PageInfo *page_in_memory;
+  int num_pages_in_memory;
 };
 
 extern struct WorkingSet* current_working_set;
-extern void PageWorkingSetInitialize(struct WorkingSet* working_set);
-extern void PageWorkingSetInsertPage(struct WorkingSet* working_set, uint32_t virtual_address);
+extern void WorkingSetInitialize(struct WorkingSet* working_set);
+extern void WorkingSetInsertPage(struct WorkingSet* working_set, uint32_t virtual_address);
 
 extern void PageReplacementInitialize();
-extern void PageSetCurrentWorkingSet(struct WorkingSet* working_set);
 
-extern void PageEvict(uint32_t virt_victim);
-extern void PageReplace(uint32_t virtual_address, uint32_t physical_address);
-extern void PageSwap(uint32_t virt_victim, uint32_t virt_new);
+extern void PageEvict(struct WorkingSet* working_set, uint32_t virt_victim);
+extern void PageReplace(struct WorkingSet* working_set, uint32_t virtual_address, uint32_t physical_address);
+extern void PageSwap(struct WorkingSet* working_set, uint32_t virt_victim, uint32_t virt_new);
 
 extern void PageReplacementTest();
 

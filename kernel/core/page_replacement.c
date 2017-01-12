@@ -4,15 +4,14 @@
 #include "string.h"
 #include "print.h"
 #include "kmalloc.h"
-
-struct WorkingSet* current_working_set = 0;
+#include "task.h"
 
 static uint8_t page_reserve_[PAGING_RESERVE_SIZE/8]; // each byte manages 8 pages
 
 static uint32_t PageGetDiskLba();
 static void PageFreeReserveBit(int i);
 
-void PageEvict(uint32_t virtual_address) {
+void PageEvict(struct WorkingSet* current_working_set, uint32_t virtual_address) {
   struct PageInfo* page = current_working_set->page_in_memory->next;
   while (page != current_working_set->page_in_memory &&
          page->virtual_address != virtual_address) {
@@ -47,13 +46,13 @@ void PageEvict(uint32_t virtual_address) {
 
   // Invalidate the page table entry of page.
   struct ptable* pt = (struct ptable*) VmmGetPageTablePointer((virtual_addr)page->virtual_address);
-  pagetable_entry* pte = (struct pagetable_entry*) VmmPtableLookupEntry(pt, virtual_address);
+  pagetable_entry* pte = VmmPtableLookupEntry(pt, virtual_address);
   PteDeleteAttribute(pte, PTE_PRESENT);
   PteDeleteAttribute(pte, PTE_DIRTY);
   PteDeleteAttribute(pte, PTE_ACCESSED);
 }
 
-void PageReplace(uint32_t virtual_address, uint32_t physical_address) {
+void PageReplace(struct WorkingSet* current_working_set, uint32_t virtual_address, uint32_t physical_address) {
   struct PageInfo* ptr = current_working_set->page_evicted->next;
   while (ptr != current_working_set->page_evicted &&
          ptr->virtual_address != virtual_address) {
@@ -87,7 +86,7 @@ void PageReplace(uint32_t virtual_address, uint32_t physical_address) {
   page_in_memory_head->prev = ptr;
 }
 
-void PageSwap(uint32_t virt_victim, uint32_t virt_new) {
+void PageSwap(struct WorkingSet* working_set, uint32_t virt_victim, uint32_t virt_new) {
   uint32_t physical_address = (uint32_t) VmmGetPhysicalAddress((void*) virt_victim);
   PrintString("Evicting: ");
   PrintHex(virt_victim);
@@ -98,8 +97,8 @@ void PageSwap(uint32_t virt_victim, uint32_t virt_new) {
   PrintString("\n");
 
   // Perform the swapping
-  PageEvict(virt_victim);
-  PageReplace(virt_new, physical_address);
+  PageEvict(working_set, virt_victim);
+  PageReplace(working_set, virt_new, physical_address);
   VmmFlushTlbEntry(virt_victim);
   VmmFlushTlbEntry(virt_new);
 }
@@ -108,7 +107,7 @@ extern void PageReplacementInitialize() {
   memset(page_reserve_, 0, PAGING_RESERVE_SIZE/8);
 }
 
-extern void PageWorkingSetInitialize(struct WorkingSet* working_set) {
+extern void WorkingSetInitialize(struct WorkingSet* working_set) {
   working_set->page_evicted = (struct PageInfo*) kmalloc(sizeof(struct PageInfo));
   working_set->page_evicted->next = working_set->page_evicted;
   working_set->page_evicted->prev = working_set->page_evicted;
@@ -116,9 +115,11 @@ extern void PageWorkingSetInitialize(struct WorkingSet* working_set) {
   working_set->page_in_memory = (struct PageInfo*) kmalloc(sizeof(struct PageInfo));
   working_set->page_in_memory->next = working_set->page_in_memory;
   working_set->page_in_memory->prev = working_set->page_in_memory;
+
+  working_set->num_pages_in_memory = 0;
 }
 
-extern void PageWorkingSetInsertPage(struct WorkingSet* working_set, uint32_t virtual_address) {
+extern void WorkingSetInsertPage(struct WorkingSet* working_set, uint32_t virtual_address) {
   struct PageInfo* page = (struct PageInfo*) kmalloc(sizeof(struct PageInfo));
   page->virtual_address = virtual_address;
   page->can_evict = PAGE_EVICTABLE;
@@ -127,10 +128,7 @@ extern void PageWorkingSetInsertPage(struct WorkingSet* working_set, uint32_t vi
   page->prev = working_set->page_in_memory;
   page->next = head;
   head->prev = page;
-}
-
-extern void PageSetCurrentWorkingSet(struct WorkingSet* working_set) {
-  current_working_set = working_set;
+  working_set->num_pages_in_memory++;
 }
 
 static uint32_t PageGetDiskLba() {
@@ -152,24 +150,26 @@ static void PageFreeReserveBit(int i) {
 }
 
 void PageReplacementTest() {
+  // Set MAX_USER_PHYSICAL_PAGE_ALLOCATION to 1.
   PrintString("Page Replacement Test.\n");
 
   struct WorkingSet* test_ws = (struct WorkingSet*) kmalloc(sizeof(struct WorkingSet));
-  PageWorkingSetInitialize(test_ws);
-  PageSetCurrentWorkingSet(test_ws);
+  WorkingSetInitialize(test_ws);
+  main_task.working_set = test_ws;
+  main_task.privilege_mode = USER_MODE;
 
   char *my_block = (char*) kmalloc(4096);
   strcpy("Canary...\n", my_block);
-  PageWorkingSetInsertPage(current_working_set, (uint32_t)my_block);
+  WorkingSetInsertPage(test_ws, (uint32_t)my_block);
   PrintString(my_block);
 
-  char *x = 0x23232323;
+  char *x = (char*) 0x23232323;
   uint32_t page = (uint32_t) x & ~0xfff;
   strcpy("New Word in block...\n", x);
   PrintString(x);
   PrintString(my_block);
 
-  char *y = 0x43411f04;
+  char *y = (char*) 0x43411f04;
   uint32_t page2 = (uint32_t) y & ~0xfff;
   strcpy("What a feeling!\n", y);
   PrintString(x);

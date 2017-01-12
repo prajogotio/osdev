@@ -106,6 +106,26 @@ void RingTestUserFunction() {
     }
     __asm__("int $0x80");
   }
+  // Test pagefault
+  char *x[] = {
+    (char*) 0x41235561,
+    (char*) 0x4f331f61,
+    (char*) 0x51123134,
+    (char*) 0x32313415};
+  *x[0] = 'A';
+  *(x[0]+1) = 0;
+  *x[1] = 'B';
+  *(x[1]+1) = 0;
+  *x[2] = 'C';
+  *(x[2]+1) = 0;
+  *x[3] = 'D';
+  *(x[3]+1) = 0;
+  for (int i = 0; i < 8; ++i) {
+    __asm__("movl %0, %%ebx": : "r"(x[i%4]):);
+    __asm__("movl $0, %eax");
+    __asm__("int $0x80");
+    for (int j = 0; j < 100000000; ++j);
+  }
   for (;;);
 }
 

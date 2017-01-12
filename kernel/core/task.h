@@ -2,6 +2,7 @@
 #define __TIO_OS_TASK_H__
 
 #include "stdint.h"
+#include "page_replacement.h"
 
 #define KERNEL_MODE 0
 #define USER_MODE   3
@@ -17,9 +18,11 @@ struct Task {
   uint32_t kernel_stack_addr;   // Unused if task is at KERNEL_MODE.
                                 // Virtual address.
   struct Task* next;
+  struct WorkingSet* working_set;
 };
 
 extern struct Task main_task;
+extern struct Task* running_task;
 
 extern void TaskInitialize();
 
@@ -29,6 +32,8 @@ extern struct Task* TaskGetNext(struct Task* task);
 extern uint32_t TaskGetPrivilegeMode(struct Task* task);
 extern uint32_t TaskGetPageDirectoryAddr(struct Task* task);
 extern uint32_t TaskGetKernelStack(struct Task* task);
+extern struct WorkingSet* TaskGetWorkingSet(struct Task* task);
+
 
 extern void TaskCreate(struct Task* task, void (*main)(), uint32_t flags, uint32_t* page_directory);
 extern void TaskCreateUserProcess(struct Task* task, void (*main)(), uint32_t flags);

@@ -13,7 +13,7 @@
 // Context switch happens in the kernel space
 // TODO: User mode? (Ring jumps)
 
-static struct Task* running_task;
+struct Task* running_task;
 struct Task main_task;
 static int is_initialized_ = 0;
 static void TaskCreateIretAndPushadFrame(struct Task* task, uint32_t user_esp);
@@ -68,6 +68,7 @@ void TaskCreate(struct Task* task, void (*main)(), uint32_t flags, uint32_t* pag
   task->page_directory_addr = (uint32_t) VmmGetCurrentPageDirectory();
   task->privilege_mode = KERNEL_MODE;
   task->next = 0;
+  task->working_set = 0;      // Working set is not used for kernel processes.
   // Push an IRET and PUSHAD frame
   TaskCreateIretAndPushadFrame(task, 0 /* user space stack, not used */);
 }
@@ -92,6 +93,10 @@ void TaskCreateUserProcess(struct Task* task, void (*main)(), uint32_t flags) {
   task->privilege_mode = USER_MODE;
   task->next = 0;
 
+  // Initalize task working set
+  task->working_set = (struct WorkingSet*) kmalloc(sizeof(struct WorkingSet));
+  WorkingSetInitialize(task->working_set);
+
   struct pdirectory* user_directory;
   RingInitializeUserDirectory(&user_directory);
 
@@ -103,10 +108,12 @@ void TaskCreateUserProcess(struct Task* task, void (*main)(), uint32_t flags) {
   uint32_t user_code = 0x00000000;
   char* user_code_segment = RingTestPageMappingHelper(user_code, user_directory);
   memcpy((char*) main, user_code_segment, 4096);
+  WorkingSetInsertPage(task->working_set, user_code);
 
   // Set user esp to 0x20000000
   uint32_t user_esp = 0x20000000;
   char* user_stack_segment = RingTestPageMappingHelper(user_esp, user_directory);
+  WorkingSetInsertPage(task->working_set, user_esp);
   
   // Push an IRET and PUSHAD frame
   TaskCreateIretAndPushadFrame(task, user_esp + 0x1000);
@@ -161,6 +168,9 @@ uint32_t TaskGetKernelStack(struct Task* task) {
   return task->kernel_stack_addr;
 }
 
+struct WorkingSet* TaskGetWorkingSet(struct Task* task) {
+  return task->working_set;
+}
 
 void TaskSchedule(struct Task* task) {
   __asm__("cli");

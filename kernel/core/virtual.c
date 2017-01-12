@@ -3,8 +3,7 @@
 #include "print.h"
 #include "hal.h"
 #include "page_replacement.h"
-
-#define DEBUG 0
+#include "task.h"
 
 struct pdirectory* current_directory_ = 0;
 static physical_addr cur_pdbr_ = 0;
@@ -15,7 +14,8 @@ static virtual_addr pagefault_address_ = 0;
 static void VmmPtableClear(struct ptable* table);
 static void VmmTest();
 static void PagefaultHandler();
-static PageFaultWithReplacementTest();
+static void PagefaultPerformReplacement();
+static void PagefaultMapNewPage();
 
 bool VmmAllocatePage(pagetable_entry* e) {
   void* frame_addr = MmapAllocateBlocks(1);
@@ -76,6 +76,10 @@ void VmmMapPage(void* physical, void* virtual) {
     // Assign to the page-directory first.
     PdeAddAttribute(e, PDE_PRESENT);
     PdeAddAttribute(e, PDE_WRITABLE);
+    // If we are in user space, let the page directory entry be accessible by user
+    if (running_task != 0 && running_task->privilege_mode == USER_MODE) {
+      PdeAddAttribute(e, PDE_USER);
+    }
     PdeSetFrame(e, ptable_addr);
 
     // Retrieve the page table
@@ -88,6 +92,11 @@ void VmmMapPage(void* physical, void* virtual) {
 
   PteSetFrame(page, (physical_addr) physical);
   PteAddAttribute(page, PTE_PRESENT);
+  // If we are in user space, let the page table entry be accessible by user
+  if (running_task != 0 && running_task->privilege_mode == USER_MODE) {
+    PteAddAttribute(page, PTE_USER);
+    PteAddAttribute(page, PTE_WRITABLE);
+  }
 }
 
 struct ptable* VmmGetPageTablePointer(virtual_addr virtual) {
@@ -150,27 +159,31 @@ static void PagefaultHandler() {
   PrintString("\n*** Pagefault handling partially implemented. Pagefault information:\n");
   PrintString("Error code: ");
   PrintHex(error_code_);
+  if (error_code_ & 1) PrintString(" PROTECTED ");
+  else PrintString(" NOT PRESENT ");
+  if (error_code_ & 2) PrintString("WR ");
+  else PrintString("RD ");
+  if (error_code_ & 4) PrintString("USR");
+  else PrintString("KRN");
   PrintString("\n");
   PrintString("Page fault address: ");
   PrintHex(pagefault_address_);
   PrintString("\n");
 
-  if (DEBUG) {
-    // Testing: FIFO page replacement
-    PageFaultWithReplacementTest();
+  if (running_task->privilege_mode == USER_MODE) {
+    if (running_task->working_set->num_pages_in_memory <= MAX_USER_PHYSICAL_PAGE_ALLOCATION) {
+      // Simply map this address to a physical address.
+      PagefaultMapNewPage();
+      WorkingSetInsertPage(running_task->working_set, pagefault_address_ & ~0xfff);
+    } else {
+      // User has exceeded its physical memory allowance.
+      // Perform page replacement algorithm.
+      PagefaultPerformReplacement();
+    }
   } else {
+    // KERNEL_MODE should never have page fault!
+    PrintString("FATAL: Kernel mode page fault.\n");
     __asm__("hlt");
-
-     // Only handle the case where page fault is caused by a new virtual address
-    // being assigned a physical address for the first time.
-    // The case where virtual address is brought back from disk is not yet
-    // implemented.
-    physical_addr new_page = (physical_addr) MmapAllocateBlocks(1);
-    VmmMapPage((void*) new_page, (void*) (pagefault_address_ & ~0xfff));
-
-    PrintString("Physical Addr: ");
-    PrintHex(new_page);
-    PrintString("\n");
   }
 
   __asm__("popa");
@@ -180,9 +193,22 @@ static void PagefaultHandler() {
   __asm__("iret");
 }
 
-static PageFaultWithReplacementTest() {
-  struct PageInfo* victim = current_working_set->page_in_memory->prev;
-  PageSwap(victim->virtual_address, pagefault_address_ & ~0xfff);
+static void PagefaultMapNewPage() {
+  // Only handle the case where page fault is caused by a new virtual address
+  // being assigned a physical address for the first time.
+  physical_addr new_page = (physical_addr) MmapAllocateBlocks(1);
+  VmmMapPage((void*) new_page, (void*) (pagefault_address_ & ~0xfff));
+
+  PrintString("Mapped to physical Addr: ");
+  PrintHex(new_page);
+  PrintString("\n");
+}
+
+static void PagefaultPerformReplacement() {
+  // Testing: FIFO page replacement.
+  // TODO: Implement LRU.
+  struct PageInfo* victim = running_task->working_set->page_in_memory->prev;
+  PageSwap(running_task->working_set, victim->virtual_address, pagefault_address_ & ~0xfff);
   PrintString("Page fault handled!\n");
 }
 
